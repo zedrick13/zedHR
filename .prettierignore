@@ -1,0 +1,6 @@
+.next
+node_modules
+pnpm-lock.yaml
+supabase/.branches
+supabase/.temp
+lib/database.types.ts

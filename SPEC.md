@@ -234,12 +234,12 @@ Conventions: every task obeys CLAUDE.md's Definition of Done. Each milestone end
 
 ### M0 — Repo, tooling, environments
 
-- [ ] Init Next.js (App Router, TS strict) + pnpm; ESLint + Prettier; folder layout per CLAUDE.md
-- [ ] `supabase init`; local stack boots; link project; envs wired in Vercel (`sin1` pinned) with anon/service keys split client/server
-- [ ] `styles/tokens.css` with §9 tokens (light+dark); base layout renders with system font stack
-- [ ] `lib/callRpc.ts` (envelope mapping, typed codes from §5); `lib/org.ts` (`getCurrentOrgId()`)
-- [ ] Vitest + Playwright scaffolds; CI = Vercel builds only (no GH deploy workflow)
-- [ ] Seed script `scripts/seed-first-admin.ts` (org row + first admin, temp password) — manual-run only
+- [x] Init Next.js (App Router, TS strict) + pnpm; ESLint + Prettier; folder layout per CLAUDE.md
+- [x] `supabase init`; local stack boots; link project; envs wired in Vercel (`sin1` pinned) with anon/service keys split client/server
+- [x] `styles/tokens.css` with §9 tokens (light+dark); base layout renders with system font stack
+- [x] `lib/callRpc.ts` (envelope mapping, typed codes from §5); `lib/org.ts` (`getCurrentOrgId()`)
+- [x] Vitest + Playwright scaffolds; CI = Vercel builds only (no GH deploy workflow)
+- [x] Seed script `scripts/seed-first-admin.ts` (org row + first admin, temp password) — manual-run only
 
 **AC:** `pnpm dev` serves a tokened shell; `supabase db reset` clean; a trivial RPC round-trips through `callRpc` locally.
 
