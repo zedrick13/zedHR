@@ -6,10 +6,27 @@ type Role = "employee" | "manager" | "admin";
 
 const TEST_PASSWORD = "Zh-test-fixture-pw1";
 
-export async function createOrg(admin: SupabaseClient<Database>) {
+export async function createOrg(
+  admin: SupabaseClient<Database>,
+  opts: {
+    geofenceLatitude?: number;
+    geofenceLongitude?: number;
+    geofenceRadiusM?: number;
+    maxCbMinutes?: number;
+    minLbMinutes?: number;
+  } = {},
+) {
   const { data, error } = await admin
     .from("MST_Organization")
-    .insert({ name: `Test Org ${randomUUID()}`, pay_cycle_type: "monthly" })
+    .insert({
+      name: `Test Org ${randomUUID()}`,
+      pay_cycle_type: "monthly",
+      geofence_latitude: opts.geofenceLatitude,
+      geofence_longitude: opts.geofenceLongitude,
+      geofence_radius_m: opts.geofenceRadiusM,
+      max_cb_minutes: opts.maxCbMinutes,
+      min_lb_minutes: opts.minLbMinutes,
+    })
     .select("id")
     .single();
 

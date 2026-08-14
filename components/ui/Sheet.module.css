@@ -1,0 +1,63 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center;
+  }
+}
+
+.sheet {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-floating);
+  animation: slide-up var(--duration-sheet) var(--ease-standard);
+}
+
+@media (min-width: 768px) {
+  .sheet {
+    border-radius: var(--radius-sheet);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+}
+
+.grabHandle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--separator);
+  align-self: center;
+}
+
+@media (min-width: 768px) {
+  .grabHandle {
+    display: none;
+  }
+}

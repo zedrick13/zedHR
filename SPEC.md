@@ -295,14 +295,22 @@ Conventions: every task obeys CLAUDE.md's Definition of Done. Each milestone end
 
 ### M3 — Core timekeeping loop
 
-- [ ] RPCs: `clock_in_user`, `clock_out_user` (full SRS §4.1/§4.2 sequence), `start_cb/end_cb/start_lb/end_lb` (violation-on-close), `get_active_session_state`
-- [ ] Home screen state machine + live timers (tabular-nums, no layout shift); optimistic pressed states ≤100ms
-- [ ] Geolocation handling (5s timeout; denied banner once/session; unavailable silent) + GPS consent sheet (NPC compliance)
-- [ ] Work-arrangement cascade + Haversine geofence in-database; boundary flags recorded
-- [ ] `/timesheet` self-view with pay-cycle ranging and status/geo chips
-- [ ] Unit tests: duplicate clock-in 422/409 path (TC-002 analog), one-open-session index race (two concurrent clock-ins ⇒ exactly one row), violation math boundaries, hybrid-defaults-to-office rule
+- [x] RPCs: `clock_in_user`, `clock_out_user` (full SRS §4.1/§4.2 sequence), `start_cb/end_cb/start_lb/end_lb` (violation-on-close), `get_active_session_state`
+- [x] Home screen state machine + live timers (tabular-nums, no layout shift); optimistic pressed states ≤100ms
+- [x] Geolocation handling (5s timeout; denied banner once/session; unavailable silent) + GPS consent sheet (NPC compliance)
+- [x] Work-arrangement cascade + Haversine geofence in-database; boundary flags recorded
+- [x] `/timesheet` self-view with pay-cycle ranging and status/geo chips
+- [x] Unit tests: duplicate clock-in 422/409 path (TC-002 analog), one-open-session index race (two concurrent clock-ins ⇒ exactly one row), violation math boundaries, hybrid-defaults-to-office rule
 
-**AC:** TC-001/TC-002 analogs green; punch p95 <500ms against Singapore project from PH network (spot-check); a punch with no GPS records `geo_status` and succeeds.
+**AC:** TC-001/TC-002 analogs green; punch p95 <500ms against Singapore project from PH network (spot-check) — not measurable in this sandbox (no deployed Singapore project to test against; local-stack latency was consistently well under 500ms, but that isn't the AC's actual claim); a punch with no GPS records `geo_status` and succeeds.
+
+**M3 implementation notes:**
+
+- **`clock_in_user`/`clock_out_user` gained a third parameter, `p_geo_status`** (not in the abbreviated `(lat,lng)` signature in §4). "Denied" (user rejected the browser permission prompt) vs "unavailable" (permission granted, no fix obtained) are both client-side facts indistinguishable from null coordinates alone — the RPC can't infer which happened, so the client states it explicitly.
+- **A real PL/pgSQL gotcha, caught by tests, not by inspection:** `record_variable IS NOT NULL` is unreliable for a plain `record`-typed variable populated via `SELECT ... INTO` — it evaluates `false` even when a row was genuinely found (confirmed directly against this Postgres version: `v IS NULL` is correct in both directions, but `v IS NOT NULL` is not). Every "was a row found" check in `clock_out_user` and `get_active_session_state` uses `NOT (v IS NULL)` instead. Checks that only test the not-found direction (`IF v IS NULL THEN raise ...`) were unaffected and needed no change. Worth grepping for this pattern (`record_var is not null`) before writing new RPCs in later milestones.
+- **Notifications are deferred to M5.** §4's "Notifications emitted by RPCs" describes geofence breach → Template C as tied to `clock_in_user`/`clock_out_user`, but the dedupe-window insert helper is explicitly M5's own checklist item. M3 computes and stores `clock_in_outside_boundary`/`clock_out_outside_boundary` (its own explicit checklist item) but does not insert `NTF_Notification` rows yet — M5 needs to wire that in.
+- **No work-arrangement configured at any level** (fresh org, nothing in `TIM_WorkArrangement`): defaults to `office` (flagged assumption, §11) so geofencing applies rather than silently not.
+- **`getGeolocation()` has its own outer 6s timeout, separate from the 5s passed to `getCurrentPosition()`.** Caught by an e2e test hanging indefinitely: in headless Chromium with no permission grant, `getCurrentPosition` never calls either callback — the browser's permission-prompt wait isn't bounded by the `timeout` option (that only bounds waiting for a position *fix* once permission is already decided). A real user who leaves the OS/browser location prompt unanswered would hit the same hang. `lib/geolocation.ts` now races the browser call against its own timer so a punch's geo step always settles, matching the invariant that geolocation never blocks a punch.
 
 ### M4 — Corrections workflow
 
@@ -370,3 +378,5 @@ Conventions: every task obeys CLAUDE.md's Definition of Done. Each milestone end
 6. **`AUD_SystemLog.action_type` registry** (§3.1): built without access to SRS §3.1's actual closed list; needs a pass against the real SRS to confirm naming/completeness before any client code starts depending on specific values.
 7. **`MST_Organization.display_locale` / `pay_cycle_start_date` defaults:** SRS doesn't give defaults; M1 ships `en-PH` and `CURRENT_DATE` respectively as placeholders — confirm before these are surfaced in the UI (§9) or used in pay-cycle math (M5).
 8. **MST_User "limited columns" for manager reads** (§3.2 row 3): M1 gives managers the full row for their managed department's members rather than a column-restricted view — see the M1 implementation note under §3.2. Revisit once the M5 Direct Reports grid defines its actual column needs.
+9. **Geofence breach notifications (Template C) are not yet wired into `clock_in_user`/`clock_out_user`** — deferred to M5, which owns the dedupe-window insert helper these need. The boundary flags themselves (`clock_in_outside_boundary`/`clock_out_outside_boundary`) are computed and stored correctly in M3.
+10. **Work-arrangement cascade default:** when nothing is configured at any level (org/department/user/day), M3's `resolve_work_arrangement()` defaults to `office`. Not specified in SPEC — a conservative choice so geofencing applies rather than silently not; confirm before M8 launch.

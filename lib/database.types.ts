@@ -846,6 +846,14 @@ export type Database = {
         Args: { p_email: string }
         Returns: undefined
       }
+      clock_in_user: {
+        Args: { p_geo_status: string; p_lat: number; p_lng: number }
+        Returns: string
+      }
+      clock_out_user: {
+        Args: { p_geo_status: string; p_lat: number; p_lng: number }
+        Returns: string
+      }
       complete_password_reset: { Args: never; Returns: undefined }
       create_invitation: {
         Args: { p_email: string; p_role: string }
@@ -855,12 +863,17 @@ export type Database = {
         }[]
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      end_cb: { Args: never; Returns: string }
+      end_lb: { Args: never; Returns: string }
       generate_mfa_backup_codes: { Args: never; Returns: string[] }
+      get_active_session_state: { Args: never; Returns: Json }
       record_login_failure: { Args: { p_email: string }; Returns: undefined }
       revoke_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
       }
+      start_cb: { Args: never; Returns: string }
+      start_lb: { Args: never; Returns: string }
       terminate_user: { Args: { p_user_id: string }; Returns: undefined }
       verify_backup_code: { Args: { p_code: string }; Returns: undefined }
     }

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/features/auth/SignOutButton";
+import { ClockCard } from "@/components/features/timekeeping/ClockCard";
+import { GpsConsentSheet } from "@/components/features/timekeeping/GpsConsentSheet";
 import styles from "./page.module.css";
 
 export default async function Home() {
@@ -15,14 +17,16 @@ export default async function Home() {
 
   return (
     <main className={styles.main}>
-      <h1 className={styles.title}>
-        {profile ? `Hi, ${profile.first_name}` : "zedHR"}
-      </h1>
-      <p className={styles.subtitle}>
-        Timekeeping module — the clock in/out home screen lands in M3.
-      </p>
-      {profile?.role === "admin" && <Link href="/admin">Admin</Link>}
-      <SignOutButton />
+      <div className={styles.header}>
+        <h1 className={styles.title}>{profile ? `Hi, ${profile.first_name}` : "zedHR"}</h1>
+        <div className={styles.headerActions}>
+          <Link href="/timesheet">Timesheet</Link>
+          {profile?.role === "admin" && <Link href="/admin">Admin</Link>}
+          <SignOutButton />
+        </div>
+      </div>
+      <ClockCard />
+      <GpsConsentSheet />
     </main>
   );
 }
