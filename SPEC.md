@@ -61,6 +61,8 @@ The Phase 1 zedHR is a multi-tenant SaaS (tenant-per-subdomain, e.g. `acme.zedhr
 
 All timestamps `TIMESTAMPTZ` (UTC). All PKs `UUID DEFAULT gen_random_uuid()`. Enum-like fields via CHECK constraints. RLS enabled on every table in its creating migration.
 
+**M1 implementation note:** every table below carries `organization_id` even where its bullet doesn't restate it (CLAUDE.md forward-compat rule #1 is unconditional: "organization_id on every domain table"). This affects `TIM_CompensableBreak`/`TIM_NonCompensableBreak`, `TIM_SyncConflict`, `MST_Holiday`, `AUD_SystemLog`, `MST_MfaBackupCode`, `RTL_RateLimitEvent` (nullable — some rate-limit buckets are pre-auth, e.g. `login:{email}`), and `NTF_Notification`. `MST_User` also carries `role_changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, required by §7 "Sessions" (role changes force re-login) but omitted from the abbreviated bullet below.
+
 ### 3.1 Tables
 
 **MST_Organization** — org config: `name`, `timezone` (default `Asia/Manila`), `display_locale`, `pay_cycle_type` CHECK (`weekly|biweekly|monthly`), `pay_cycle_start_date`, geofence `latitude/longitude/radius_m`, `max_cb_minutes` (default 20), `min_lb_minutes`, `data_retention_days` (default 365).
@@ -76,7 +78,7 @@ All timestamps `TIMESTAMPTZ` (UTC). All PKs `UUID DEFAULT gen_random_uuid()`. En
 **TIM_WorkSession** — `user_id`, `organization_id`, `clock_in_time`, `clock_out_time` NULLABLE, `clock_in_ip/clock_out_ip`, `clock_in_geo_status`/`clock_out_geo_status` CHECK (`checked|unavailable|denied`), `clock_in_lat/lng`, `clock_out_lat/lng` NULLABLE, `clock_in_outside_boundary`/`clock_out_outside_boundary` BOOL default false, `flagged_long_running` BOOL default false.
 **Partial unique index:** `CREATE UNIQUE INDEX idx_open_work_session ON TIM_WorkSession (user_id) WHERE (clock_out_time IS NULL);`
 
-**TIM_CompensableBreak / TIM_NonCompensableBreak** — `work_session_id` FK, `start_time`, `end_time` NULLABLE, `is_auto_closed` BOOL, `policy_violation` BOOL, `policy_violation_reason` CHECK (`CB_OVERTIME|LB_SHORT`). Violations are evaluated **on close only**: CB_OVERTIME if duration > `max_cb_minutes`; LB_SHORT if duration < `min_lb_minutes`.
+**TIM_CompensableBreak / TIM_NonCompensableBreak** — `work_session_id` FK, `start_time`, `end_time` NULLABLE, `is_auto_closed` BOOL, `policy_violation` BOOL, `policy_violation_reason` CHECK. Violations are evaluated **on close only**: CB_OVERTIME if duration > `max_cb_minutes`; LB_SHORT if duration < `min_lb_minutes`. M1 implementation: each table's CHECK is tightened to the single reason it can actually produce (`CB_OVERTIME` only on the CB table, `LB_SHORT` only on the LB table) rather than the combined `CB_OVERTIME|LB_SHORT` list, and each has a partial unique index (`work_session_id) WHERE end_time IS NULL`) mirroring `idx_open_work_session`'s one-open-row-at-a-time guarantee (CLAUDE.md invariant #4's rationale extended to breaks).
 
 **TIM_CorrectionRequest** — `user_id`, `organization_id`, `work_session_id` NULLABLE, `request_type` CHECK (`clock_in|clock_out|cb_start|cb_end|lb_start|lb_end|create_session`), `requested_timestamp`, `reason` TEXT NOT NULL (1–500 chars, enforced at RPC), `status` CHECK (`pending|approved|rejected`), `reviewed_by/reviewed_at`, `rejection_note` NULLABLE (≤500).
 
@@ -84,7 +86,13 @@ All timestamps `TIMESTAMPTZ` (UTC). All PKs `UUID DEFAULT gen_random_uuid()`. En
 
 **MST_Holiday** — reference-only for future Payroll (`date`, `name`, `type` CHECK (`regular|special_non_working|custom`), `region_scope`). No reads in this module.
 
-**AUD_SystemLog** — append-only: `actor_id` NULLABLE, `target_id` NULLABLE, `action_type` CHECK (closed list per SRS §3.1 — CLOCK_IN … DSAR_REQUEST_FULFILLED), `previous_value` JSONB, `new_value` JSONB, `created_at`. No UPDATE/DELETE policies for anyone.
+**AUD_SystemLog** — append-only: `actor_id` NULLABLE, `target_id` NULLABLE, `action_type` CHECK (closed list, see registry below), `previous_value` JSONB, `new_value` JSONB, `created_at`. No UPDATE/DELETE policies for anyone; writes go exclusively through `private.log_audit_event()` (SECURITY DEFINER).
+
+**`action_type` registry (M1, flagged assumption):** this file only had the shorthand "CLOCK_IN … DSAR_REQUEST_FULFILLED" pointing at SRS §3.1 for the full closed list. The SRS wasn't available while implementing M1, so the list below was derived from every RPC/job/feature named in this document instead, and is the local source of truth until confirmed against the actual SRS §3.1 (see §11 open items):
+
+`CLOCK_IN` · `CLOCK_OUT` · `CB_STARTED` · `CB_ENDED` · `LB_STARTED` · `LB_ENDED` · `CORRECTION_SUBMITTED` · `CORRECTION_APPROVED` · `CORRECTION_REJECTED` · `TIMECARD_ADMIN_EDITED` · `INVITATION_CREATED` · `INVITATION_REVOKED` · `INVITATION_ACCEPTED` · `USER_TERMINATED` · `USER_ANONYMIZED` · `MFA_ENROLLED` · `MFA_RESET` · `USER_ROLE_CHANGED` · `DSAR_REQUEST_LOGGED` · `DSAR_REQUEST_FULFILLED` · `LOGIN_FAILED` · `LOGIN_LOCKOUT` · `RATE_LIMIT_TRIGGERED`.
+
+Adding a type beyond this list = migration + update this registry in the same PR (CLAUDE.md invariant #9).
 
 **MST_MfaBackupCode** — `user_id`, `code_hash` (bcrypt; plaintext shown once), `is_used`, `used_at`.
 
@@ -105,6 +113,13 @@ All timestamps `TIMESTAMPTZ` (UTC). All PKs `UUID DEFAULT gen_random_uuid()`. En
 | RTL_RateLimitEvent, MST_MfaBackupCode | no client access (RPC/security-definer only) | | |
 
 **MFA gate:** manager/admin write policies additionally require `auth.jwt() ->> 'aal' = 'aal2'`. Reads are never aal2-gated. Employee writes are never aal2-gated.
+
+**M1 implementation notes on this matrix:**
+
+- **RLS write model.** The "W"/"R/W own rows"/"create" cells above describe the *net effect* of RLS + RPCs together, not a literal RLS INSERT/UPDATE/DELETE grant. CLAUDE.md invariant #2 ("all writes go through Postgres RPCs, no direct `.insert()/.update()/.delete()` from the client") is applied literally: every table's RLS policies added in M1 are SELECT-only, with exactly one exception the matrix already calls out explicitly — `NTF_Notification`'s recipient-side `is_read`/`read_at` mark-read, implemented as a column-level `GRANT UPDATE (is_read, read_at)` (not a full-row grant) combined with a row policy. All other writes ("W") happen through SECURITY DEFINER RPCs added in M2–M7, which bypass RLS as the table owner. Granting direct client writes on e.g. `TIM_WorkSession` or `TIM_CorrectionRequest` would let a client bypass the RPC's own rate-limiting, validation, and server-authoritative-timestamp logic — exactly what invariant #2 exists to prevent.
+- **MST_User "limited columns" for managers** (row 3) is deferred: Postgres RLS filters rows, not columns, and column-level `GRANT` can't differentiate employee/manager/admin because they share one Postgres role (`authenticated`) — differentiation happens entirely through JWT claims read inside policies. M1 gives managers full-row read of their managed department's members; a dedicated column-limited view is planned for the M5 Direct Reports grid once its actual column needs are known.
+- **JWT claim naming.** The custom access token hook stamps `organization_id`, `user_role`, and `role_changed_at` onto the JWT — note `user_role`, not `role`. Supabase's JWT already has a top-level `role` claim PostgREST uses to select the Postgres connection role (`anon`/`authenticated`); overwriting it with the employee/manager/admin value would break authentication entirely. This file's "custom claims (role, organization_id, ...)" wording in §2.4/§10 refers to the data being carried, not this literal JSON key.
+- **Helper function location.** `app_current_user_id()`, `app_user_role()`, `app_user_org_id()`, and related predicates live in a `private` schema (not `public`), per `supabase/config.toml`'s `[api] schemas` (only `public`/`graphql_public` are PostgREST-exposed). This keeps them usable inside RLS policies (a normal `EXECUTE` grant, unrelated to PostgREST routing) without being directly callable as a client RPC — revoking `EXECUTE` from `authenticated` instead would have broken every policy that calls them.
 
 ---
 
@@ -245,12 +260,12 @@ Conventions: every task obeys CLAUDE.md's Definition of Done. Each milestone end
 
 ### M1 — Schema & RLS foundation
 
-- [ ] Migrations for all §3 tables incl. CHECKs, FKs, partial unique index `idx_open_work_session`, 50-user insert trigger
-- [ ] JWT helper functions (`app_user_role()`, `app_user_org_id()`, `app_current_user_id()`); custom claims (`role`, `organization_id`, `role_changed_at` guard) via auth hook
-- [ ] RLS policies per §3.2 matrix, aal2 predicates on manager/admin writes
-- [ ] `AUD_SystemLog` append-only (no update/delete policies); insert helper function
-- [ ] `RTL_RateLimitEvent` + `check_rate_limit(bucket, max, window)` SQL helper
-- [ ] Generated types committed; RLS test suite: for each table, prove cross-user/cross-role/negative cases (analog TC-020/TC-023: wrong-user reads return nothing, not errors that reveal existence)
+- [x] Migrations for all §3 tables incl. CHECKs, FKs, partial unique index `idx_open_work_session`, 50-user insert trigger
+- [x] JWT helper functions (`app_user_role()`, `app_user_org_id()`, `app_current_user_id()`); custom claims (`user_role`, `organization_id`, `role_changed_at` guard) via auth hook — see §3.2 M1 note on the `user_role` claim naming
+- [x] RLS policies per §3.2 matrix, aal2 predicates on manager/admin writes
+- [x] `AUD_SystemLog` append-only (no update/delete policies); insert helper function
+- [x] `RTL_RateLimitEvent` + `check_rate_limit(bucket, max, window)` SQL helper
+- [x] Generated types committed; RLS test suite: for each table, prove cross-user/cross-role/negative cases (analog TC-020/TC-023: wrong-user reads return nothing, not errors that reveal existence)
 
 **AC:** RLS suite green; direct PostgREST write attempts as employee against protected tables fail; reset-from-scratch clean.
 
@@ -339,5 +354,8 @@ Conventions: every task obeys CLAUDE.md's Definition of Done. Each milestone end
 1. **Vercel plan:** Hobby is non-commercial; Pro (~US$20/mo) is the compliant baseline — confirm before domain attach (M8).
 2. **Supabase Auth mail deliverability:** built-in mailer is low-volume/best-effort; if invite deliverability disappoints, attach custom SMTP to Supabase Auth (config change only — do not add a provider SDK).
 3. **Provider limits go stale:** verify current Supabase Auth rate/email thresholds and Vercel plan limits at build time (SRS §13.1) — never hardcode them as app logic.
-4. **`min_lb_minutes` default:** SRS gives no default; proposal: 30. Confirm with Zed before M1 migration.
+4. **`min_lb_minutes` default:** SRS gives no default. The M1 migration ships the SPEC's own proposal (30) as the column default so M1 wasn't blocked on a synchronous confirmation — still needs Zed's sign-off; trivial follow-up migration if it should change.
 5. **Pay-cycle range math** for the reports pane (weekly/biweekly/monthly anchored to `pay_cycle_start_date`) needs one worked example per cycle type approved before M5.
+6. **`AUD_SystemLog.action_type` registry** (§3.1): built without access to SRS §3.1's actual closed list; needs a pass against the real SRS to confirm naming/completeness before any client code starts depending on specific values.
+7. **`MST_Organization.display_locale` / `pay_cycle_start_date` defaults:** SRS doesn't give defaults; M1 ships `en-PH` and `CURRENT_DATE` respectively as placeholders — confirm before these are surfaced in the UI (§9) or used in pay-cycle math (M5).
+8. **MST_User "limited columns" for manager reads** (§3.2 row 3): M1 gives managers the full row for their managed department's members rather than a column-restricted view — see the M1 implementation note under §3.2. Revisit once the M5 Direct Reports grid defines its actual column needs.

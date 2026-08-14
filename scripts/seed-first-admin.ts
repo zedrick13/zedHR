@@ -10,10 +10,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-
-// No Database generic here: MST_Organization/MST_User aren't in the
-// generated types until the M1 migrations land (this script is a M0
-// deliverable per CLAUDE.md, ahead of the schema it seeds).
+import type { Database } from "@/lib/database.types";
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -25,18 +22,30 @@ function parseArgs() {
   const email = get("--email");
   const name = get("--name");
   const orgName = get("--org") ?? "zedHR";
+  const payCycleType = get("--pay-cycle") ?? "monthly";
 
   if (!email || !name) {
     console.error(
-      "Usage: pnpm tsx scripts/seed-first-admin.ts --email <email> --name \"First Last\" [--org <org name>]",
+      "Usage: pnpm tsx scripts/seed-first-admin.ts --email <email> --name \"First Last\" [--org <org name>] [--pay-cycle weekly|biweekly|monthly]",
     );
+    process.exit(1);
+  }
+
+  if (!["weekly", "biweekly", "monthly"].includes(payCycleType)) {
+    console.error("--pay-cycle must be one of: weekly, biweekly, monthly");
     process.exit(1);
   }
 
   const [firstName, ...rest] = name.split(" ");
   const lastName = rest.join(" ") || firstName;
 
-  return { email, firstName, lastName, orgName };
+  return {
+    email,
+    firstName,
+    lastName,
+    orgName,
+    payCycleType: payCycleType as "weekly" | "biweekly" | "monthly",
+  };
 }
 
 function generateTempPassword(): string {
@@ -55,14 +64,14 @@ async function main() {
     process.exit(1);
   }
 
-  const { email, firstName, lastName, orgName } = parseArgs();
-  const supabase = createClient(url, serviceRoleKey, {
+  const { email, firstName, lastName, orgName, payCycleType } = parseArgs();
+  const supabase = createClient<Database>(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
   const { data: org, error: orgError } = await supabase
     .from("MST_Organization")
-    .insert({ name: orgName })
+    .insert({ name: orgName, pay_cycle_type: payCycleType })
     .select("id")
     .single();
 

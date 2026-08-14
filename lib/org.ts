@@ -17,13 +17,11 @@ export async function getCurrentOrgId(): Promise<string> {
     throw new Error("UNAUTHORIZED");
   }
 
-  // Cast: MST_User isn't in the generated types until the M1 migrations
-  // land (lib/database.types.ts is a placeholder today).
-  const { data, error } = (await supabase
+  const { data, error } = await supabase
     .from("MST_User")
     .select("organization_id")
     .eq("id", user.id)
-    .single()) as { data: { organization_id: string } | null; error: unknown };
+    .single();
 
   if (error || !data) {
     throw new Error("UNAUTHORIZED");
