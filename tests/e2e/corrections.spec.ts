@@ -127,7 +127,9 @@ test("employee submits a correction, manager approves it from the dashboard", as
   await expect(managerPage).toHaveURL("/", { timeout: 10_000 });
 
   await managerPage.goto("/dashboard");
-  await expect(managerPage.getByText("Employee E2E")).toBeVisible({ timeout: 10_000 });
+  // "Employee E2E" now also appears in the M5 Direct Reports grid row, so
+  // scope to the corrections queue list item specifically.
+  await expect(managerPage.getByRole("listitem").getByText("Employee E2E")).toBeVisible({ timeout: 10_000 });
   await managerPage.getByRole("button", { name: "Approve" }).click();
   await expect(managerPage.getByText("No pending correction requests.")).toBeVisible({ timeout: 10_000 });
 });

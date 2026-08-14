@@ -1,14 +1,16 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/features/navigation/AppHeader";
+import { DirectReportsGrid } from "@/components/features/dashboard/DirectReportsGrid";
 import { CorrectionReviewRow } from "./CorrectionReviewRow";
 import { AdminTimecardEditForm } from "./AdminTimecardEditForm";
 import styles from "./page.module.css";
 
 // SPEC's route map puts the corrections queue on /dashboard alongside a
-// headcount widget, direct reports grid, and reports pane — those are M5's
-// deliverable. This is the M4-scoped slice: just the corrections queue (its
-// own explicit M4 checklist item) plus the admin locked-timecard edit form.
+// headcount widget, direct reports grid, and reports pane. M4 shipped just
+// the corrections queue; M5 adds the headcount widget + Direct Reports
+// grid here. The reports pane (dept/employee filters, CSV export) is still
+// its own M5 checklist item, not yet built.
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -29,6 +31,8 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
+  const { data: directReports } = await supabase.rpc("get_direct_reports_status");
+
   const { data: pending } = await supabase
     .from("TIM_CorrectionRequest")
     .select("*, MST_User!TIM_CorrectionRequest_user_id_fkey(first_name, last_name)")
@@ -38,6 +42,11 @@ export default async function DashboardPage() {
   return (
     <main className={styles.main}>
       <AppHeader title="Dashboard" />
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Direct reports</h2>
+        <DirectReportsGrid initialRows={directReports ?? []} role={profile.role} />
+      </section>
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Corrections queue</h2>

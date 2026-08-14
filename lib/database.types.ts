@@ -880,6 +880,19 @@ export type Database = {
       end_lb: { Args: never; Returns: string }
       generate_mfa_backup_codes: { Args: never; Returns: string[] }
       get_active_session_state: { Args: never; Returns: Json }
+      get_direct_reports_status: {
+        Args: never
+        Returns: {
+          department_id: string
+          department_name: string
+          first_name: string
+          geofence_state: string
+          last_name: string
+          status: string
+          today_seconds: number
+          user_id: string
+        }[]
+      }
       record_login_failure: { Args: { p_email: string }; Returns: undefined }
       reject_correction_request: {
         Args: { p_correction_id: string; p_rejection_note?: string }
