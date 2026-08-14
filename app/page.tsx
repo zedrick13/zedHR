@@ -21,6 +21,10 @@ export default async function Home() {
         <h1 className={styles.title}>{profile ? `Hi, ${profile.first_name}` : "zedHR"}</h1>
         <div className={styles.headerActions}>
           <Link href="/timesheet">Timesheet</Link>
+          <Link href="/requests">Requests</Link>
+          {(profile?.role === "manager" || profile?.role === "admin") && (
+            <Link href="/dashboard">Dashboard</Link>
+          )}
           {profile?.role === "admin" && <Link href="/admin">Admin</Link>}
           <SignOutButton />
         </div>

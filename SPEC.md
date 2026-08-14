@@ -314,13 +314,20 @@ Conventions: every task obeys CLAUDE.md's Definition of Done. Each milestone end
 
 ### M4 — Corrections workflow
 
-- [ ] `submit_correction_request` (reason 1–500 enforced at RPC; 20/24h bucket) + UI from timesheet rows + missing-shift two-request flow (create_session then clock_out)
-- [ ] `approve_correction_request` / `reject_correction_request` (staleness guard, manager dept-scope check, audit before/after, Template D notification insert)
-- [ ] `admin_edit_locked_timecard` + admin UI (reason required, INVALID_TIME_RANGE)
-- [ ] Manager corrections queue grid (original vs requested, approve/reject, resolved-row slide-out, CORRECTION_ALREADY_RESOLVED toast on second-reviewer race)
-- [ ] Tests: TC-007/008/009 analogs; concurrent double-approve ⇒ one success one 409; originals never mutated except via approved branch
+- [x] `submit_correction_request` (reason 1–500 enforced at RPC; 20/24h bucket) + UI from timesheet rows + missing-shift two-request flow (create_session then clock_out)
+- [x] `approve_correction_request` / `reject_correction_request` (staleness guard, manager dept-scope check, audit before/after, Template D notification insert)
+- [x] `admin_edit_locked_timecard` + admin UI (reason required, INVALID_TIME_RANGE)
+- [x] Manager corrections queue grid (original vs requested, approve/reject, resolved-row slide-out, CORRECTION_ALREADY_RESOLVED toast on second-reviewer race) — see the M4 implementation note on where this lives before M5 builds the full `/dashboard`
+- [x] Tests: TC-007/008/009 analogs; concurrent double-approve ⇒ one success one 409; originals never mutated except via approved branch
 
 **AC:** full employee→manager round-trip works with notifications landing; race test deterministic-green.
+
+**M4 implementation notes:**
+
+- **Templates B and D are inserted directly, not deferred to M5.** Unlike Template C (geofence breach, deferred in M3 because it needs the 12h dedupe-window helper), B (submit → manager) and D (approve/reject → employee) need no dedupe — `private.create_notification()` is a plain insert, added in this migration. M5 still owns the dedupe-window helper for C/E and the bell/inbox UI that reads all of these.
+- **`/dashboard` is scoped to just the corrections queue for now.** SPEC's route map puts the queue on `/dashboard` alongside a headcount widget, direct reports grid, and reports pane — those are M5's own checklist items. Rather than block M4's explicit "manager corrections queue" deliverable on M5 existing, `/dashboard` ships now with only the queue (plus the admin locked-timecard edit form) and redirects employees away; M5 adds the rest to the same route.
+- **cb_start/cb_end/lb_start/lb_end corrections target "the most recent break of that type on the session."** `TIM_CorrectionRequest` has no `break_id` column — adding one would be exactly the kind of schema-widening the `create_session` note already warns against for missing shifts. `*_start` corrects the most recent break if one exists, else opens a new one (mirroring `create_session`'s "the record didn't fully exist yet" shape); `*_end` corrects the most recent break's end time and re-evaluates its violation.
+- **`private.apply_correction(p_correction record)` takes a `record` parameter** — confirmed this is valid for a `plpgsql`-language function (unlike a plain SQL-language function, where it isn't) before relying on it.
 
 ### M5 — Notifications & manager dashboard
 

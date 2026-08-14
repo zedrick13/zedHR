@@ -836,7 +836,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_edit_locked_timecard: {
+        Args: {
+          p_clock_in: string
+          p_clock_out: string
+          p_reason: string
+          p_session_id: string
+        }
+        Returns: undefined
+      }
       admin_reset_mfa: { Args: { p_user_id: string }; Returns: undefined }
+      approve_correction_request: {
+        Args: { p_correction_id: string }
+        Returns: undefined
+      }
       change_user_role: {
         Args: { p_new_role: string; p_user_id: string }
         Returns: undefined
@@ -868,12 +881,25 @@ export type Database = {
       generate_mfa_backup_codes: { Args: never; Returns: string[] }
       get_active_session_state: { Args: never; Returns: Json }
       record_login_failure: { Args: { p_email: string }; Returns: undefined }
+      reject_correction_request: {
+        Args: { p_correction_id: string; p_rejection_note?: string }
+        Returns: undefined
+      }
       revoke_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
       }
       start_cb: { Args: never; Returns: string }
       start_lb: { Args: never; Returns: string }
+      submit_correction_request: {
+        Args: {
+          p_reason: string
+          p_request_type: string
+          p_requested_timestamp: string
+          p_work_session_id: string
+        }
+        Returns: string
+      }
       terminate_user: { Args: { p_user_id: string }; Returns: undefined }
       verify_backup_code: { Args: { p_code: string }; Returns: undefined }
     }

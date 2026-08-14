@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { adminClient, isSupabaseReachable, signInAs } from "./client";
+import { adminClient, isSupabaseReachable, rpc, signInAs } from "./client";
 import { createOrg, createUser } from "./fixtures";
 
 const reachable = await isSupabaseReachable();
@@ -21,21 +21,6 @@ type ActiveSessionState = {
   session: { id: string } | null;
   active_break: { id: string } | null;
 };
-
-// The generated types don't model nullable scalar RPC args (p_lat/p_lng can
-// genuinely be null at runtime for denied/unavailable geo_status), so a
-// direct rpc(client, ) call doesn't typecheck for those cases. This wrapper
-// sidesteps that the same way lib/callRpc.ts does — real app code already
-// goes through callRpc, so this friction is test-only. Typed <T> so callers
-// don't need a cast at every use site.
-async function rpc<T = unknown>(
-  client: SupabaseClient<Database>,
-  fn: string,
-  args?: Record<string, unknown>,
-): Promise<{ data: T | null; error: { message: string } | null }> {
-  const result = await client.rpc(fn as never, args as never);
-  return result as unknown as { data: T | null; error: { message: string } | null };
-}
 
 async function getState(client: SupabaseClient<Database>): Promise<ActiveSessionState> {
   const { data } = await rpc(client, "get_active_session_state");

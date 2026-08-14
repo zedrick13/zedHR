@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { computeCurrentPayCycleRange } from "@/lib/payCycle";
+import { RequestCorrectionButton } from "@/components/features/corrections/RequestCorrectionButton";
 import styles from "./page.module.css";
 
 function formatDuration(ms: number): string {
@@ -73,12 +75,20 @@ export default async function TimesheetPage() {
 
   return (
     <main className={styles.main}>
-      <h1 className={styles.title}>Timesheet</h1>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Timesheet</h1>
+        <Link href="/requests">My requests</Link>
+      </div>
       {range && (
         <p className={styles.range}>
           {range.start.toLocaleDateString()} – {range.end.toLocaleDateString()}
         </p>
       )}
+      <RequestCorrectionButton
+        workSessionId={null}
+        allowedTypes={["create_session"]}
+        label="Report a missing shift"
+      />
 
       {!sessions || sessions.length === 0 ? (
         <p className={styles.empty}>No shifts in this pay cycle yet.</p>
@@ -113,6 +123,10 @@ export default async function TimesheetPage() {
                     </span>
                   ))}
                 </div>
+                <RequestCorrectionButton
+                  workSessionId={session.id}
+                  allowedTypes={["clock_in", "clock_out", "cb_start", "cb_end", "lb_start", "lb_end"]}
+                />
               </li>
             );
           })}

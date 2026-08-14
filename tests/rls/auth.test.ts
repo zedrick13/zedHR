@@ -1,10 +1,9 @@
 // M2 auth/invitation/MFA RPC suite. Same live-Supabase-required, graceful
 // skip pattern as tests/rls/rls.test.ts.
 import { beforeAll, describe, expect, it } from "vitest";
-import * as OTPAuth from "otpauth";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { adminClient, anonClient, isSupabaseReachable, signInAs } from "./client";
+import { adminClient, anonClient, grantAal2, isSupabaseReachable, signInAs } from "./client";
 import { createOrg, createUser } from "./fixtures";
 
 const reachable = await isSupabaseReachable();
@@ -19,30 +18,6 @@ function decodeJwtClaims(token: string): Record<string, unknown> {
   return JSON.parse(Buffer.from(padded, "base64url").toString("utf8"));
 }
 
-async function enrollAndVerifyTotp(client: SupabaseClient<Database>) {
-  const { data: enrolled, error: enrollError } = await client.auth.mfa.enroll({
-    factorType: "totp",
-  });
-  if (enrollError || !enrolled) throw new Error(`enroll failed: ${enrollError?.message}`);
-
-  const { data: challenge, error: challengeError } = await client.auth.mfa.challenge({
-    factorId: enrolled.id,
-  });
-  if (challengeError || !challenge) throw new Error(`challenge failed: ${challengeError?.message}`);
-
-  const totp = new OTPAuth.TOTP({ secret: enrolled.totp.secret, digits: 6, period: 30 });
-  const code = totp.generate();
-
-  const { data: verified, error: verifyError } = await client.auth.mfa.verify({
-    factorId: enrolled.id,
-    challengeId: challenge.id,
-    code,
-  });
-  if (verifyError || !verified) throw new Error(`verify failed: ${verifyError?.message}`);
-
-  return verified;
-}
-
 describe.skipIf(!reachable)("M2 auth RPCs", () => {
   const admin = adminClient();
   let orgId: string;
@@ -53,7 +28,7 @@ describe.skipIf(!reachable)("M2 auth RPCs", () => {
     orgId = await createOrg(admin);
     adminUser = await createUser(admin, { organizationId: orgId, role: "admin" });
     adminAal2Client = await signInAs(adminUser.email, adminUser.password);
-    await enrollAndVerifyTotp(adminAal2Client);
+    await grantAal2(adminAal2Client);
   }, 30_000);
 
   describe("login lockout", () => {
@@ -143,7 +118,7 @@ describe.skipIf(!reachable)("M2 auth RPCs", () => {
       });
 
       const relogin = await signInAs(email, "RealPassw0rd");
-      await enrollAndVerifyTotp(relogin);
+      await grantAal2(relogin);
 
       const { data: codes, error: codesError } = await relogin.rpc("generate_mfa_backup_codes");
       expect(codesError).toBeNull();
