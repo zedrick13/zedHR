@@ -878,6 +878,26 @@ export type Database = {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       end_cb: { Args: never; Returns: string }
       end_lb: { Args: never; Returns: string }
+      export_timesheet_report: {
+        Args: {
+          p_department_id?: string
+          p_employee_id?: string
+          p_range_end?: string
+          p_range_start?: string
+        }
+        Returns: {
+          cb_minutes: number
+          clock_in: string
+          clock_out: string
+          department_name: string
+          duration_hours: number
+          employee_name: string
+          geofence: string
+          lb_minutes: number
+          session_date: string
+          violations: string
+        }[]
+      }
       generate_mfa_backup_codes: { Args: never; Returns: string[] }
       get_active_session_state: { Args: never; Returns: Json }
       get_direct_reports_status: {

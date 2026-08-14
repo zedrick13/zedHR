@@ -251,3 +251,129 @@ describe.skipIf(!reachable)("M5 get_direct_reports_status", () => {
     });
   });
 });
+
+type ReportRow = {
+  employee_name: string;
+  department_name: string | null;
+  session_date: string;
+  clock_in: string;
+  clock_out: string | null;
+  duration_hours: number;
+  cb_minutes: number;
+  lb_minutes: number;
+  violations: string | null;
+  geofence: string;
+};
+
+describe.skipIf(!reachable)("M5 export_timesheet_report", () => {
+  const admin = adminClient();
+
+  it("returns rows for a manager's own department, with duration/geofence/violations computed", async () => {
+    const orgId = await createOrg(admin, {
+      geofenceLatitude: GEOFENCE_CENTER.lat,
+      geofenceLongitude: GEOFENCE_CENTER.lng,
+      geofenceRadiusM: 200,
+      maxCbMinutes: 20,
+    });
+    const deptId = await createDepartment(admin, orgId, "Ops");
+    const manager = await createUser(admin, { organizationId: orgId, role: "manager", departmentId: deptId });
+    await setDepartmentManager(admin, deptId, manager.id);
+    const employee = await createUser(admin, { organizationId: orgId, role: "employee", departmentId: deptId });
+
+    const clockIn = new Date(Date.now() - 4 * 3600_000).toISOString();
+    const clockOut = new Date().toISOString();
+    const { data: session } = await admin
+      .from("TIM_WorkSession")
+      .insert({
+        user_id: employee.id,
+        organization_id: orgId,
+        clock_in_time: clockIn,
+        clock_out_time: clockOut,
+        clock_in_geo_status: "checked",
+        clock_in_lat: FAR_AWAY.lat,
+        clock_in_lng: FAR_AWAY.lng,
+        clock_in_outside_boundary: true,
+      })
+      .select("id")
+      .single();
+
+    // A 30-minute CB against a 20-minute cap: policy violation.
+    await admin.from("TIM_CompensableBreak").insert({
+      organization_id: orgId,
+      work_session_id: session!.id,
+      start_time: clockIn,
+      end_time: new Date(new Date(clockIn).getTime() + 30 * 60_000).toISOString(),
+      policy_violation: true,
+      policy_violation_reason: "CB_OVERTIME",
+    });
+
+    const managerClient = await signInAs(manager.email, manager.password);
+    // "Today" per the org's timezone (Asia/Manila, this fixture's default),
+    // not the test runner's UTC clock — they can disagree by a calendar day.
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+    const { data, error } = await rpc<ReportRow[]>(managerClient, "export_timesheet_report", {
+      p_range_start: today,
+      p_range_end: today,
+    });
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+    const row = data![0];
+    expect(row.department_name).toBe("Ops");
+    expect(row.duration_hours).toBeCloseTo(4, 1);
+    expect(row.geofence).toBe("Out of Bounds");
+    expect(row.violations).toBe("CB_OVERTIME");
+    expect(row.cb_minutes).toBeCloseTo(30, 0);
+  });
+
+  it("a manager cannot filter to a department they don't manage", async () => {
+    const orgId = await createOrg(admin);
+    const deptA = await createDepartment(admin, orgId);
+    const deptB = await createDepartment(admin, orgId);
+    const managerA = await createUser(admin, { organizationId: orgId, role: "manager", departmentId: deptA });
+    await setDepartmentManager(admin, deptA, managerA.id);
+    await createUser(admin, { organizationId: orgId, role: "manager", departmentId: deptB });
+
+    const managerAClient = await signInAs(managerA.email, managerA.password);
+    const { error } = await rpc(managerAClient, "export_timesheet_report", { p_department_id: deptB });
+
+    expect(error?.message).toBe("UNAUTHORIZED");
+  });
+
+  it("a manager cannot filter to an employee outside their managed department(s)", async () => {
+    const orgId = await createOrg(admin);
+    const deptA = await createDepartment(admin, orgId);
+    const deptB = await createDepartment(admin, orgId);
+    const managerA = await createUser(admin, { organizationId: orgId, role: "manager", departmentId: deptA });
+    await setDepartmentManager(admin, deptA, managerA.id);
+    const employeeB = await createUser(admin, { organizationId: orgId, role: "employee", departmentId: deptB });
+
+    const managerAClient = await signInAs(managerA.email, managerA.password);
+    const { error } = await rpc(managerAClient, "export_timesheet_report", { p_employee_id: employeeB.id });
+
+    expect(error?.message).toBe("UNAUTHORIZED");
+  });
+
+  it("an employee cannot call export_timesheet_report at all", async () => {
+    const orgId = await createOrg(admin);
+    const employee = await createUser(admin, { organizationId: orgId, role: "employee" });
+    const employeeClient = await signInAs(employee.email, employee.password);
+
+    const { error } = await rpc(employeeClient, "export_timesheet_report");
+    expect(error?.message).toBe("UNAUTHORIZED");
+  });
+
+  it("rate-limits report exports past the report_export bucket threshold", async () => {
+    const orgId = await createOrg(admin);
+    const adminUser = await createUser(admin, { organizationId: orgId, role: "admin" });
+    const adminUserClient = await signInAs(adminUser.email, adminUser.password);
+
+    for (let i = 0; i < 20; i++) {
+      const { error } = await rpc(adminUserClient, "export_timesheet_report");
+      expect(error).toBeNull();
+    }
+
+    const { error: blocked } = await rpc(adminUserClient, "export_timesheet_report");
+    expect(blocked?.message).toBe("ERR_RATE_LIMITED");
+  });
+});

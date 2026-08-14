@@ -2,15 +2,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/features/navigation/AppHeader";
 import { DirectReportsGrid } from "@/components/features/dashboard/DirectReportsGrid";
+import { ReportsPane } from "@/components/features/dashboard/ReportsPane";
+import type { PayCycleType } from "@/lib/payCycle";
 import { CorrectionReviewRow } from "./CorrectionReviewRow";
 import { AdminTimecardEditForm } from "./AdminTimecardEditForm";
 import styles from "./page.module.css";
 
 // SPEC's route map puts the corrections queue on /dashboard alongside a
 // headcount widget, direct reports grid, and reports pane. M4 shipped just
-// the corrections queue; M5 adds the headcount widget + Direct Reports
-// grid here. The reports pane (dept/employee filters, CSV export) is still
-// its own M5 checklist item, not yet built.
+// the corrections queue; M5 adds the rest here.
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -23,7 +23,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("MST_User")
-    .select("role")
+    .select("role, organization_id")
     .eq("id", user.id)
     .single();
 
@@ -32,6 +32,25 @@ export default async function DashboardPage() {
   }
 
   const { data: directReports } = await supabase.rpc("get_direct_reports_status");
+
+  const { data: org } = await supabase
+    .from("MST_Organization")
+    .select("pay_cycle_type, pay_cycle_start_date")
+    .eq("id", profile.organization_id)
+    .single();
+
+  const departments = Array.from(
+    new Map(
+      (directReports ?? [])
+        .filter((row) => row.department_id !== null)
+        .map((row) => [row.department_id as string, { id: row.department_id as string, name: row.department_name ?? "—" }]),
+    ).values(),
+  );
+  const people = (directReports ?? []).map((row) => ({
+    id: row.user_id,
+    name: `${row.first_name} ${row.last_name}`,
+    departmentId: row.department_id,
+  }));
 
   const { data: pending } = await supabase
     .from("TIM_CorrectionRequest")
@@ -47,6 +66,18 @@ export default async function DashboardPage() {
         <h2 className={styles.sectionTitle}>Direct reports</h2>
         <DirectReportsGrid initialRows={directReports ?? []} role={profile.role} />
       </section>
+
+      {org && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Reports</h2>
+          <ReportsPane
+            people={people}
+            departments={departments}
+            payCycleType={org.pay_cycle_type as PayCycleType}
+            payCycleStartDate={org.pay_cycle_start_date}
+          />
+        </section>
+      )}
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Corrections queue</h2>

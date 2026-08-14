@@ -13,22 +13,22 @@ function adminClient() {
   });
 }
 
-test("manager dashboard: headcount widget + Direct Reports grid, live-updates on clock-in", async ({ page }) => {
+test("reports pane: filters render and CSV export downloads a file", async ({ page }) => {
   const password = "E2ePassw0rd1";
   const admin = adminClient();
 
   const { data: org } = await admin
     .from("MST_Organization")
-    .insert({ name: `E2E Dashboard Org ${crypto.randomUUID()}`, pay_cycle_type: "monthly" })
+    .insert({ name: `E2E Reports Org ${crypto.randomUUID()}`, pay_cycle_type: "monthly" })
     .select("id")
     .single();
   const { data: dept } = await admin
     .from("MST_Department")
-    .insert({ organization_id: org!.id, name: "E2E Dept" })
+    .insert({ organization_id: org!.id, name: "E2E Reports Dept" })
     .select("id")
     .single();
 
-  const managerEmail = `e2e-dash-mgr-${crypto.randomUUID()}@zedhr.test`;
+  const managerEmail = `e2e-report-mgr-${crypto.randomUUID()}@zedhr.test`;
   const { data: managerAuth } = await admin.auth.admin.createUser({
     email: managerEmail,
     password,
@@ -38,7 +38,7 @@ test("manager dashboard: headcount widget + Direct Reports grid, live-updates on
     id: managerAuth!.user!.id,
     organization_id: org!.id,
     department_id: dept!.id,
-    first_name: "Dash",
+    first_name: "Report",
     last_name: "Manager",
     role: "manager",
     is_active: true,
@@ -46,7 +46,7 @@ test("manager dashboard: headcount widget + Direct Reports grid, live-updates on
   });
   await admin.from("MST_Department").update({ manager_id: managerAuth!.user!.id }).eq("id", dept!.id);
 
-  const employeeEmail = `e2e-dash-emp-${crypto.randomUUID()}@zedhr.test`;
+  const employeeEmail = `e2e-report-emp-${crypto.randomUUID()}@zedhr.test`;
   const { data: employeeAuth } = await admin.auth.admin.createUser({
     email: employeeEmail,
     password,
@@ -56,11 +56,18 @@ test("manager dashboard: headcount widget + Direct Reports grid, live-updates on
     id: employeeAuth!.user!.id,
     organization_id: org!.id,
     department_id: dept!.id,
-    first_name: "Dash",
+    first_name: "Report",
     last_name: "Employee",
     role: "employee",
     is_active: true,
     mfa_enrolled: false,
+  });
+  await admin.from("TIM_WorkSession").insert({
+    user_id: employeeAuth!.user!.id,
+    organization_id: org!.id,
+    clock_in_time: new Date(Date.now() - 3 * 3600_000).toISOString(),
+    clock_out_time: new Date().toISOString(),
+    clock_in_geo_status: "unavailable",
   });
 
   await page.goto("/login");
@@ -86,19 +93,22 @@ test("manager dashboard: headcount widget + Direct Reports grid, live-updates on
   await expect(page).toHaveURL("/", { timeout: 10_000 });
 
   await page.goto("/dashboard");
-  await expect(page.getByRole("cell", { name: "Dash Employee" })).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByRole("heading", { name: "Direct reports" })).toBeVisible();
-  await expect(page.getByText("Clocked Out")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Reports", exact: true })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("cell", { name: "Report Employee" })).toBeVisible();
 
-  // Live update: the employee clocks in server-side (no employee browser
-  // session needed for this check) and the grid should reflect it without
-  // a page refresh, via the Realtime subscription.
-  await admin.from("TIM_WorkSession").insert({
-    user_id: employeeAuth!.user!.id,
-    organization_id: org!.id,
-    clock_in_time: new Date().toISOString(),
-    clock_in_geo_status: "unavailable",
-  });
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export CSV" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^timesheet-report-.*\.csv$/);
 
-  await expect(page.getByText("Clocked In")).toBeVisible({ timeout: 10_000 });
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk as Buffer);
+  }
+  const csvText = Buffer.concat(chunks).toString("utf-8");
+  expect(csvText).toContain("Employee,Department,Date,Clock In,Clock Out");
+  expect(csvText).toContain("Report Employee");
+
+  await expect(page.getByText(/Exported \d+ row\(s\)\./)).toBeVisible({ timeout: 10_000 });
 });
