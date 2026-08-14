@@ -7,12 +7,6 @@
   gap: var(--space-2);
 }
 
-.title {
-  font-size: var(--text-large-title);
-  font-weight: 700;
-  margin: 0;
-}
-
 .empty {
   color: var(--label-secondary);
   font-size: var(--text-body);

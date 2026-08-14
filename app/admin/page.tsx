@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { AppHeader } from "@/components/features/navigation/AppHeader";
 import { InviteForm } from "./InviteForm";
 import { RevokeButton } from "./RevokeButton";
 import styles from "./page.module.css";
@@ -14,7 +15,7 @@ export default async function AdminPage() {
 
   return (
     <main className={styles.main}>
-      <h1 className={styles.title}>Admin</h1>
+      <AppHeader title="Admin" />
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Invite someone</h2>
         <InviteForm />

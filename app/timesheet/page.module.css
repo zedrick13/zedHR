@@ -7,19 +7,6 @@
   gap: var(--space-2);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.title {
-  font-size: var(--text-large-title);
-  font-weight: 700;
-  margin: 0;
-}
-
 .range {
   color: var(--label-secondary);
   font-size: var(--text-footnote);

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { AppHeader } from "@/components/features/navigation/AppHeader";
 import { CorrectionReviewRow } from "./CorrectionReviewRow";
 import { AdminTimecardEditForm } from "./AdminTimecardEditForm";
 import styles from "./page.module.css";
@@ -36,7 +37,7 @@ export default async function DashboardPage() {
 
   return (
     <main className={styles.main}>
-      <h1 className={styles.title}>Dashboard</h1>
+      <AppHeader title="Dashboard" />
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Corrections queue</h2>

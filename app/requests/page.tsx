@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { AppHeader } from "@/components/features/navigation/AppHeader";
 import styles from "./page.module.css";
 
 const REQUEST_TYPE_LABELS: Record<string, string> = {
@@ -35,7 +36,7 @@ export default async function RequestsPage() {
 
   return (
     <main className={styles.main}>
-      <h1 className={styles.title}>My requests</h1>
+      <AppHeader title="My requests" />
 
       {!requests || requests.length === 0 ? (
         <p className={styles.empty}>You haven&rsquo;t submitted any correction requests.</p>

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { computeCurrentPayCycleRange } from "@/lib/payCycle";
+import { AppHeader } from "@/components/features/navigation/AppHeader";
 import { RequestCorrectionButton } from "@/components/features/corrections/RequestCorrectionButton";
 import styles from "./page.module.css";
 
@@ -75,10 +75,7 @@ export default async function TimesheetPage() {
 
   return (
     <main className={styles.main}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Timesheet</h1>
-        <Link href="/requests">My requests</Link>
-      </div>
+      <AppHeader title="Timesheet" />
       {range && (
         <p className={styles.range}>
           {range.start.toLocaleDateString()} – {range.end.toLocaleDateString()}

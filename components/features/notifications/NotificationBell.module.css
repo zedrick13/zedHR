@@ -1,0 +1,146 @@
+.wrapper {
+  position: relative;
+}
+
+.bellButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--label-primary);
+  cursor: pointer;
+}
+
+.bellButton:hover {
+  background: var(--bg-base);
+}
+
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--semantic-red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  animation: badgePop 400ms var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge {
+    animation: none;
+  }
+}
+
+@keyframes badgePop {
+  0% {
+    transform: scale(0.5);
+  }
+  60% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  max-width: min(320px, 90vw);
+  max-height: 400px;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-floating);
+  z-index: 20;
+  animation: popoverScale 200ms var(--ease-standard);
+  transform-origin: top right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover {
+    animation: none;
+  }
+}
+
+@keyframes popoverScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.popoverHeader {
+  padding: var(--space-2);
+  font-weight: 700;
+  border-bottom: 1px solid var(--separator);
+}
+
+.empty {
+  padding: var(--space-2);
+  color: var(--label-secondary);
+  font-size: var(--text-footnote);
+  margin: 0;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  border: none;
+  border-bottom: 1px solid var(--separator);
+  background: transparent;
+  color: var(--label-primary);
+  text-align: left;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.item:hover {
+  background: var(--bg-base);
+}
+
+.itemUnread {
+  background: color-mix(in srgb, var(--tint) 8%, transparent);
+}
+
+.itemUnread:hover {
+  background: color-mix(in srgb, var(--tint) 14%, transparent);
+}
+
+.itemTitle {
+  font-weight: 600;
+  font-size: var(--text-subheadline);
+}
+
+.itemBody {
+  font-size: var(--text-footnote);
+  color: var(--label-secondary);
+}
