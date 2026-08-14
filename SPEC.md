@@ -331,13 +331,20 @@ Conventions: every task obeys CLAUDE.md's Definition of Done. Each milestone end
 
 ### M5 — Notifications & manager dashboard
 
-- [ ] `NTF_Notification` insert helpers with dedupe-window logic (C: 12h pair-key; E: 24h session-key); Realtime publication + RLS
+- [x] `NTF_Notification` insert helpers with dedupe-window logic (C: 12h pair-key; E: 24h session-key); Realtime publication + RLS
 - [ ] Bell + badge + popover inbox (mark-read, deep-links, spring badge pop, live insert without refresh)
 - [ ] Dashboard: headcount widget (live), Direct Reports grid with geofence column states incl. N/A (No GPS)
 - [ ] Reports pane: dept/employee filters, pay-cycle ranges anchored to `pay_cycle_start_date`, CSV export in org timezone, `report_export` bucket
 - [ ] Manager scope RLS verified in-grid AND via direct REST (TC-030 analog: no leakage outside managed depts); multi-dept manager sees union with Department column
 
 **AC:** geofence breach generates exactly one Template C per 12h per pair under repeated punches; CSV timestamps match Asia/Manila.
+
+**M5 implementation notes (in progress):**
+
+- **`private.create_deduped_notification(...)` is the shared dedupe-window helper** both Template C and (later) Template E use: `exists (select 1 from NTF_Notification where dedupe_key = ... and created_at > now() - window)` → skip, else insert. It's a thin wrapper around the M4 `private.create_notification()` insert shape, just adding the dedupe check and the `dedupe_key`/`p_dedupe_window` params. `private.create_notification` itself is untouched — Templates B/D still use it directly since they don't dedupe.
+- **Template C is now wired into `clock_in_user`/`clock_out_user`** (deferred from M3): both RPCs, after computing `v_outside`, call a new `private.notify_geofence_breach(org, department, employee_id, employee_name)` helper that resolves the department's manager (or every admin if unmanaged — the same fallback `submit_correction_request` uses for Template B) and calls the dedupe helper with key `geofence:{manager_id}:{employee_id}` and a 12h window. Both RPCs were re-`create or replace`d in the M5 migration rather than edited in place in the M3 migration file, matching the precedent already set for `custom_access_token_hook` in M2 — a plain function body change doesn't need a new column/table migration, but re-stating the full function in a new dated migration keeps each milestone's migration file an accurate record of what that milestone shipped.
+- **Template E's actual call site is still M7's**, not M5's. SPEC's M5 bullet asks for the *dedupe-window logic* for both C and E, which `private.create_deduped_notification` already generically supports (any caller passing `dedupe_key`/`p_dedupe_window` gets the same exactly-once-per-window guarantee) — but the long-running-session *detector* is `auto_close_abandoned_breaks_and_sessions()`, an M7 pg_cron job that doesn't exist yet. M7 will call `private.create_deduped_notification(..., 'longrun:' || session_id, interval '24 hours')` once that job is written; no placeholder job is added here.
+- **RLS/Realtime for `NTF_Notification` needed no changes** — M1's `ntf_notification_select_own`/`ntf_notification_update_own` policies and the `supabase_realtime` publication membership already cover Template C rows exactly like B/D/E/G (verified by reading, not re-migrating).
 
 ### M6 — Offline queue & sync
 
@@ -385,5 +392,4 @@ Conventions: every task obeys CLAUDE.md's Definition of Done. Each milestone end
 6. **`AUD_SystemLog.action_type` registry** (§3.1): built without access to SRS §3.1's actual closed list; needs a pass against the real SRS to confirm naming/completeness before any client code starts depending on specific values.
 7. **`MST_Organization.display_locale` / `pay_cycle_start_date` defaults:** SRS doesn't give defaults; M1 ships `en-PH` and `CURRENT_DATE` respectively as placeholders — confirm before these are surfaced in the UI (§9) or used in pay-cycle math (M5).
 8. **MST_User "limited columns" for manager reads** (§3.2 row 3): M1 gives managers the full row for their managed department's members rather than a column-restricted view — see the M1 implementation note under §3.2. Revisit once the M5 Direct Reports grid defines its actual column needs.
-9. **Geofence breach notifications (Template C) are not yet wired into `clock_in_user`/`clock_out_user`** — deferred to M5, which owns the dedupe-window insert helper these need. The boundary flags themselves (`clock_in_outside_boundary`/`clock_out_outside_boundary`) are computed and stored correctly in M3.
-10. **Work-arrangement cascade default:** when nothing is configured at any level (org/department/user/day), M3's `resolve_work_arrangement()` defaults to `office`. Not specified in SPEC — a conservative choice so geofencing applies rather than silently not; confirm before M8 launch.
+9. **Work-arrangement cascade default:** when nothing is configured at any level (org/department/user/day), M3's `resolve_work_arrangement()` defaults to `office`. Not specified in SPEC — a conservative choice so geofencing applies rather than silently not; confirm before M8 launch.
