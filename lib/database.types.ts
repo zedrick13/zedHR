@@ -1,4 +1,3 @@
-Connecting to db 5432
 export type Json =
   | string
   | number
@@ -42,7 +41,7 @@ export type Database = {
           created_at: string
           id: string
           new_value: Json | null
-          organization_id: string
+          organization_id: string | null
           previous_value: Json | null
           target_id: string | null
         }
@@ -52,7 +51,7 @@ export type Database = {
           created_at?: string
           id?: string
           new_value?: Json | null
-          organization_id: string
+          organization_id?: string | null
           previous_value?: Json | null
           target_id?: string | null
         }
@@ -62,7 +61,7 @@ export type Database = {
           created_at?: string
           id?: string
           new_value?: Json | null
-          organization_id?: string
+          organization_id?: string | null
           previous_value?: Json | null
           target_id?: string | null
         }
@@ -264,6 +263,7 @@ export type Database = {
           last_name: string
           mfa_enrolled: boolean
           organization_id: string
+          pending_aal2_grant_at: string | null
           role: string
           role_changed_at: string
           scheduled_purge_at: string | null
@@ -279,6 +279,7 @@ export type Database = {
           last_name: string
           mfa_enrolled?: boolean
           organization_id: string
+          pending_aal2_grant_at?: string | null
           role: string
           role_changed_at?: string
           scheduled_purge_at?: string | null
@@ -294,6 +295,7 @@ export type Database = {
           last_name?: string
           mfa_enrolled?: boolean
           organization_id?: string
+          pending_aal2_grant_at?: string | null
           role?: string
           role_changed_at?: string
           scheduled_purge_at?: string | null
@@ -825,7 +827,42 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: {
+          p_first_name: string
+          p_last_name: string
+          p_password: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      admin_reset_mfa: { Args: { p_user_id: string }; Returns: undefined }
+      change_user_role: {
+        Args: { p_new_role: string; p_user_id: string }
+        Returns: undefined
+      }
+      check_login_allowed: { Args: { p_email: string }; Returns: undefined }
+      check_password_reset_allowed: {
+        Args: { p_email: string }
+        Returns: undefined
+      }
+      complete_password_reset: { Args: never; Returns: undefined }
+      create_invitation: {
+        Args: { p_email: string; p_role: string }
+        Returns: {
+          invitation_id: string
+          invitation_token: string
+        }[]
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      generate_mfa_backup_codes: { Args: never; Returns: string[] }
+      record_login_failure: { Args: { p_email: string }; Returns: undefined }
+      revoke_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: undefined
+      }
+      terminate_user: { Args: { p_user_id: string }; Returns: undefined }
+      verify_backup_code: { Args: { p_code: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

@@ -1,0 +1,38 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.label {
+  font-size: var(--text-footnote);
+  color: var(--label-secondary);
+  font-weight: 600;
+}
+
+.input {
+  min-height: var(--hit-target-min);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--separator);
+  background: var(--bg-elevated);
+  color: var(--label-primary);
+  font-size: var(--text-body);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 1px;
+  border-color: var(--tint);
+}
+
+.inputError {
+  border-color: var(--semantic-red);
+}
+
+.error {
+  font-size: var(--text-caption);
+  color: var(--semantic-red);
+  margin: 0;
+}

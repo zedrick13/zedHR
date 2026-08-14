@@ -1,0 +1,37 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 360px;
+}
+
+.selectLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--text-footnote);
+  color: var(--label-secondary);
+  font-weight: 600;
+}
+
+.select {
+  min-height: var(--hit-target-min);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--separator);
+  background: var(--bg-elevated);
+  color: var(--label-primary);
+  font-size: var(--text-body);
+}
+
+.error {
+  color: var(--semantic-red);
+  font-size: var(--text-footnote);
+  margin: 0;
+}
+
+.success {
+  color: var(--semantic-green);
+  font-size: var(--text-footnote);
+  margin: 0;
+}

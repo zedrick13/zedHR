@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "supabase:gen-types": "supabase gen types typescript --local > lib/database.types.ts"
+    "supabase:gen-types": "supabase gen types typescript --local 2>/dev/null | grep -v '^Connecting to db' > lib/database.types.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
@@ -32,6 +32,7 @@
     "eslint-config-next": "16.3.0",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^30.0.1",
+    "otpauth": "^9.5.1",
     "prettier": "^3.9.6",
     "tsx": "^4.23.12",
     "typescript": "^5",

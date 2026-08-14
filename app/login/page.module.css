@@ -1,0 +1,22 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.error {
+  color: var(--semantic-red);
+  font-size: var(--text-footnote);
+  margin: 0;
+}
+
+.forgotLink {
+  font-size: var(--text-footnote);
+  color: var(--tint);
+  text-align: center;
+  text-decoration: none;
+}
+
+.forgotLink:hover {
+  text-decoration: underline;
+}

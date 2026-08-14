@@ -1,0 +1,22 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.message {
+  font-size: var(--text-body);
+  color: var(--label-primary);
+  margin: 0;
+}
+
+.backLink {
+  font-size: var(--text-footnote);
+  color: var(--tint);
+  text-align: center;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}

@@ -21,6 +21,9 @@ export const ERROR_CODES = {
   PASSWORD_POLICY_VIOLATION: 422,
   USER_NOT_FOUND: 404,
   USER_NOT_TERMINATED: 409,
+  // Added in M2 (SPEC.md §5 note): not in the original registry, needed for
+  // the backup-code verification path (SPEC §7).
+  INVALID_MFA_CODE: 422,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
@@ -48,6 +51,7 @@ const TOAST_MESSAGES: Record<ErrorCode, string> = {
     "Password must be at least 10 characters with a letter and a number.",
   USER_NOT_FOUND: "That user couldn't be found.",
   USER_NOT_TERMINATED: "That user isn't terminated.",
+  INVALID_MFA_CODE: "That code isn't valid. Please try again.",
 };
 
 export function isErrorCode(code: string): code is ErrorCode {

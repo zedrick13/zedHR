@@ -12,7 +12,7 @@ Next.js (App Router, TypeScript) on Vercel + Supabase (Postgres, Auth, Storage, 
 pnpm install
 supabase start          # local Supabase stack (requires Docker)
 supabase db reset        # apply migrations + seed
-cp .env.example .env.local   # fill in NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY from `supabase status`
+cp .env.example .env.local   # fill in all three vars from `supabase status` (anon + service-role key)
 pnpm dev
 ```
 
@@ -40,4 +40,4 @@ SUPABASE_SERVICE_ROLE_KEY=... NEXT_PUBLIC_SUPABASE_URL=... \
 
 ## Status
 
-Milestone progress is tracked in `SPEC.md` §10. Currently: M0 (repo/tooling scaffold) and M1 (schema & RLS foundation) complete.
+Milestone progress is tracked in `SPEC.md` §10. Currently complete: M0 (repo/tooling scaffold), M1 (schema & RLS foundation), M2 (auth, invitations, MFA).

@@ -1,0 +1,50 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.error {
+  color: var(--semantic-red);
+  font-size: var(--text-footnote);
+  margin: 0;
+}
+
+.qr {
+  width: 200px;
+  height: 200px;
+  align-self: center;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--separator);
+}
+
+.secret {
+  font-size: var(--text-footnote);
+  color: var(--label-secondary);
+  text-align: center;
+  word-break: break-all;
+}
+
+.codeList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--bg-base);
+  border-radius: var(--radius-control);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.code {
+  font-family: monospace;
+  font-size: var(--text-callout);
+  font-variant-numeric: tabular-nums;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-footnote);
+}

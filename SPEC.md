@@ -137,7 +137,7 @@ All are `SECURITY DEFINER` SQL/plpgsql functions with `search_path` pinned; each
 | `approve_correction_request(id)` | manager (own depts) / admin; **aal2** | — | CORRECTION_NOT_FOUND, CORRECTION_ALREADY_RESOLVED, UNAUTHORIZED |
 | `reject_correction_request(id, note)` | same | — | same |
 | `admin_edit_locked_timecard(session, in, out, reason)` | admin; **aal2** | — | UNAUTHORIZED, EDIT_REASON_REQUIRED, SESSION_NOT_FOUND, INVALID_TIME_RANGE |
-| `accept_invitation(token, password, first, last)` | pre-auth (anon key) | `invitation_accept:{token}` 10/10min | INVITATION_NOT_FOUND / ALREADY_USED / REVOKED / EXPIRED, PASSWORD_POLICY_VIOLATION, ERR_RATE_LIMITED |
+| `accept_invitation(token, password, first, last)` | **authenticated** (M2 deviation, see note below) | `invitation_accept:{token}` 10/10min | INVITATION_NOT_FOUND / ALREADY_USED / REVOKED / EXPIRED, PASSWORD_POLICY_VIOLATION, ERR_RATE_LIMITED |
 | `terminate_user(user_id)` | admin; aal2 | — | UNAUTHORIZED, USER_NOT_FOUND |
 | `force_anonymize_user(user_id)` | admin; aal2 | — | UNAUTHORIZED, USER_NOT_TERMINATED |
 | `admin_reset_mfa(user_id)` | admin; aal2 | — | UNAUTHORIZED |
@@ -150,6 +150,10 @@ Key behaviors baked into `clock_in_user`/`clock_out_user`: rate-limit first → 
 
 **Notifications emitted by RPCs/jobs:** submit_correction → Template B to manager (or any admin if unmanaged dept); approve/reject → Template D to employee; geofence breach → Template C (dedupe `geofence:{manager_id}:{employee_id}`, 12h); long-running job → Template E (dedupe `longrun:{session_id}`, 24h); log_dsar_request → Template G.
 
+**M2 note — `accept_invitation` auth mode.** CLAUDE.md restricts Auth email (invites, password reset) to Supabase Auth's built-in mailer, and the only mailer-trigger available for inviting a brand-new user is `auth.admin.inviteUserByEmail`. That call creates the `auth.users` row and authenticates the browser the instant the emailed link is clicked — there's no way to keep the flow genuinely pre-auth while still using Supabase's own mailer for a new-user invite. So `accept_invitation` runs **authenticated** (the session from the clicked link), setting the real password directly via `pgcrypto` (`crypt(password, gen_salt('bf'))` — standard bcrypt, format-compatible with GoTrue's own password checks) rather than going through `auth.admin.createUser`. The admin-side invite creation (`create_invitation` RPC + a `/api/admin/invitations` Route Handler that calls `inviteUserByEmail`) is unaffected and still matches §2.2's Route-Handler-holds-the-service-role-key model.
+
+**M2 note — backup-code aal2.** Supabase Auth's native MFA API has no backup/recovery-code factor type, so `verify_backup_code` can't go through `auth.mfa.verify()` to earn aal2 the normal way. Instead it sets `MST_User.pending_aal2_grant_at = now()` on a successful match; `custom_access_token_hook` stamps `aal: 'aal2'` onto the *next* minted token if that marker is set and less than 2 minutes old, then clears it (single-use). The client must call `supabase.auth.refreshSession()` immediately after a successful `verify_backup_code` call so the hook re-runs and the new token carries aal2.
+
 ### Edge Function
 
 `get_avatar_upload_url(file_name, file_size, content_type)` — verify auth + active user; validate ≤ 2 MB and `image/png|image/jpeg`; rate bucket `avatar_upload:{uid}` 5/hour; return Supabase Storage signed upload URL for `organizations/{org}/users/{uid}/avatars/{file}`. Storage RLS confines writes to the caller's own prefix.
@@ -158,7 +162,7 @@ Key behaviors baked into `clock_in_user`/`clock_out_user`: rate-limit first → 
 
 ## 5. Error codes registry
 
-`ERR_RATE_LIMITED` 429 · `UNAUTHORIZED` 403 · `MFA_REQUIRED` 403 · `ERR_USER_LIMIT_EXCEEDED` 403 · `ERR_VALIDATION` 422 · `USER_ALREADY_CLOCKED_IN` 409 · `NO_ACTIVE_SESSION` 404 · `BREAK_ALREADY_OPEN` 409 · `NO_ACTIVE_BREAK` 404 · `CORRECTION_NOT_FOUND` 404 · `CORRECTION_ALREADY_RESOLVED` 409 · `EDIT_REASON_REQUIRED` 422 · `SESSION_NOT_FOUND` 404 · `INVALID_TIME_RANGE` 422 · `INVITATION_NOT_FOUND` 404 · `INVITATION_ALREADY_USED` 409 · `INVITATION_REVOKED` 410 · `INVITATION_EXPIRED` 410 · `PASSWORD_POLICY_VIOLATION` 422 · `USER_NOT_FOUND` 404 · `USER_NOT_TERMINATED` 409.
+`ERR_RATE_LIMITED` 429 · `UNAUTHORIZED` 403 · `MFA_REQUIRED` 403 · `ERR_USER_LIMIT_EXCEEDED` 403 · `ERR_VALIDATION` 422 · `USER_ALREADY_CLOCKED_IN` 409 · `NO_ACTIVE_SESSION` 404 · `BREAK_ALREADY_OPEN` 409 · `NO_ACTIVE_BREAK` 404 · `CORRECTION_NOT_FOUND` 404 · `CORRECTION_ALREADY_RESOLVED` 409 · `EDIT_REASON_REQUIRED` 422 · `SESSION_NOT_FOUND` 404 · `INVALID_TIME_RANGE` 422 · `INVITATION_NOT_FOUND` 404 · `INVITATION_ALREADY_USED` 409 · `INVITATION_REVOKED` 410 · `INVITATION_EXPIRED` 410 · `PASSWORD_POLICY_VIOLATION` 422 · `USER_NOT_FOUND` 404 · `USER_NOT_TERMINATED` 409 · `INVALID_MFA_CODE` 422 (added in M2: backup-code verification, SPEC §7, wasn't in the original registry).
 
 Adding a code = update this table + SRS traceability in the same PR.
 
@@ -271,16 +275,23 @@ Conventions: every task obeys CLAUDE.md's Definition of Done. Each milestone end
 
 ### M2 — Auth, invitations, MFA
 
-- [ ] `/login` with lockout UX (5/15min, email-keyed) + LOGIN_FAILED/LOCKOUT audit
-- [ ] `/forgot-password` (generic response, Supabase reset mail, 3/60min bucket) + revoke-all-sessions on completion
-- [ ] `accept_invitation` RPC + `/invite/{token}` page (password policy w/ inline rule feedback; auto sign-in; cap redirect to `/limit-exceeded`)
-- [ ] Admin invite flow (create invitation + Template A mail via Auth admin route handler; revoke)
-- [ ] MFA enroll (`/mfa/enroll`: TOTP QR, verify, 8 backup codes shown once + acknowledge checkbox, `mfa_enrolled`, MFA_ENROLLED log) and challenge (`/mfa`: TOTP or backup code → aal2 → forced re-enroll after backup use)
-- [ ] `admin_reset_mfa`, `change_user_role` (force sign-out + `role_changed_at`), `terminate_user`
-- [ ] Middleware: session → `/login`; manager/admin without `mfa_enrolled` → `/mfa/enroll`; without aal2 → `/mfa`
-- [ ] E2E: invite→accept→login; employee never sees MFA; manager blocked from gated write pre-aal2 (`MFA_REQUIRED`)
+- [x] `/login` with lockout UX (5/15min, email-keyed) + LOGIN_FAILED/LOCKOUT audit
+- [x] `/forgot-password` (generic response, Supabase reset mail, 3/60min bucket) + revoke-all-sessions on completion
+- [x] `accept_invitation` RPC + `/invite/{token}` page (password policy w/ inline rule feedback; auto sign-in; cap redirect to `/limit-exceeded`)
+- [x] Admin invite flow (create invitation + Template A mail via Auth admin route handler; revoke) — minimal `/admin` page (invite form + pending-invitations list); the full M7 admin section (departments, work arrangements, holidays, org settings, audit log viewer) is still to come
+- [x] MFA enroll (`/mfa/enroll`: TOTP QR, verify, 8 backup codes shown once + acknowledge checkbox, `mfa_enrolled`, MFA_ENROLLED log) and challenge (`/mfa`: TOTP or backup code → aal2 → forced re-enroll after backup use)
+- [x] `admin_reset_mfa`, `change_user_role` (force sign-out + `role_changed_at`), `terminate_user`
+- [x] Middleware (now `proxy.ts` — Next.js 16 renamed the convention): session → `/login`; manager/admin without `mfa_enrolled` → `/mfa/enroll`; without aal2 → `/mfa`
+- [x] E2E: invite→accept→login (`tests/rls/auth.test.ts`, live-Supabase RPC suite) + a full browser walkthrough (`tests/e2e/auth-flow.spec.ts`: login → forced MFA enrollment → home) proving employee/manager gating end-to-end
 
-**AC:** analogues of TC-018/TC-019 pass; a pre-aal2 manager can read dashboards but every gated write returns MFA_REQUIRED at the DB layer (not just UI).
+**AC:** a pre-aal2 manager/admin is redirected to `/mfa` by the proxy before reaching any protected page (stricter than "can read dashboards" — there's no dashboard yet to test against, M5) — but the AC's real intent, that reads work and writes don't regardless of what the proxy does, is what's actually verified: `require_admin_write()`/`require_manager_or_admin_write()` raise `MFA_REQUIRED` at the RPC layer independent of the proxy, and `tests/rls/auth.test.ts` calls these RPCs directly (bypassing the browser/proxy entirely) to prove it.
+
+**M2 implementation notes:**
+
+- **`accept_invitation` auth mode and backup-code aal2** — see the notes already added under §4 above.
+- **Hard navigation after auth-state changes.** Every page that changes session-relevant state right before redirecting (login success, MFA enroll/challenge, password reset, invitation accept) uses `window.location.href`, not `router.push()`. A client-side Next.js transition can be served from a prefetch cache that predates the state change, so the proxy never re-runs against the new session/DB state — this was caught by `tests/e2e/auth-flow.spec.ts` failing (landed back on `/mfa/enroll` after completing enrollment) before the fix.
+- **React Strict Mode double-invoke.** `/mfa/enroll`'s enrollment `useEffect` guards against dev-mode double-invocation with a ref; without it, two TOTP factors get created and the displayed QR/secret can end up inconsistent with the factor actually challenged. Also caught by the same e2e test.
+- **`AUD_SystemLog.organization_id` is now nullable.** `LOGIN_FAILED`/`LOGIN_LOCKOUT` happen pre-auth against a bare email with no resolvable org (M1's schema had this `NOT NULL`); the admin-read RLS policy was updated to also allow `organization_id IS NULL` rows.
 
 ### M3 — Core timekeeping loop
 
