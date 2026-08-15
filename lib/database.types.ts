@@ -850,6 +850,10 @@ export type Database = {
         Args: { p_correction_id: string }
         Returns: undefined
       }
+      auto_close_abandoned_breaks_and_sessions: {
+        Args: never
+        Returns: undefined
+      }
       change_user_role: {
         Args: { p_new_role: string; p_user_id: string }
         Returns: undefined
@@ -922,6 +926,7 @@ export type Database = {
           violations: string
         }[]
       }
+      force_anonymize_user: { Args: { p_user_id: string }; Returns: undefined }
       generate_mfa_backup_codes: { Args: never; Returns: string[] }
       get_active_session_state: { Args: never; Returns: Json }
       get_direct_reports_status: {
@@ -945,6 +950,7 @@ export type Database = {
         }
         Returns: string
       }
+      purge_stale_rows: { Args: never; Returns: undefined }
       record_login_failure: { Args: { p_email: string }; Returns: undefined }
       reject_correction_request: {
         Args: { p_correction_id: string; p_rejection_note?: string }
@@ -954,6 +960,7 @@ export type Database = {
         Args: { p_invitation_id: string }
         Returns: undefined
       }
+      run_scheduled_anonymization: { Args: never; Returns: undefined }
       start_cb: {
         Args: {
           p_attempted_timestamp?: string
