@@ -111,6 +111,17 @@ Deno.serve(async (req) => {
     .gt("created_at", windowStart);
 
   if ((count ?? 0) >= RATE_LIMIT_MAX) {
+    // Mirrors private.log_audit_event's insert shape (CLAUDE.md invariant
+    // #8: every rate-limited RPC/action logs RATE_LIMIT_TRIGGERED) — done
+    // as a direct insert here since this function already can't reach the
+    // private schema's helpers via PostgREST for the same reason it
+    // duplicates check_rate_limit's counting logic above.
+    await admin.from("AUD_SystemLog").insert({
+      organization_id: profile.organization_id,
+      actor_id: user.id,
+      target_id: user.id,
+      action_type: "RATE_LIMIT_TRIGGERED",
+    });
     return errorResponse("ERR_RATE_LIMITED", "You're doing that too often. Please wait a moment and try again.", 429);
   }
 

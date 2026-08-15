@@ -46,6 +46,13 @@ describe.skipIf(!reachable)("M2 auth RPCs", () => {
 
       const sixth = await anon.rpc("check_login_allowed", { p_email: email });
       expect(sixth.error?.message).toBe("ERR_RATE_LIMITED");
+
+      const { data: auditRows } = await admin
+        .from("AUD_SystemLog")
+        .select("action_type")
+        .eq("action_type", "LOGIN_LOCKOUT")
+        .contains("new_value", { email });
+      expect(auditRows).toHaveLength(1);
     });
   });
 

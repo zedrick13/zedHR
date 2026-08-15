@@ -405,5 +405,12 @@ describe.skipIf(!reachable)("M5 export_timesheet_report", () => {
 
     const { error: blocked } = await rpc(adminUserClient, "export_timesheet_report");
     expect(blocked?.message).toBe("ERR_RATE_LIMITED");
+
+    const { data: auditRows } = await admin
+      .from("AUD_SystemLog")
+      .select("action_type")
+      .eq("actor_id", adminUser.id)
+      .eq("action_type", "RATE_LIMIT_TRIGGERED");
+    expect(auditRows).toHaveLength(1);
   });
 });
