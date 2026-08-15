@@ -40,4 +40,4 @@ SUPABASE_SERVICE_ROLE_KEY=... NEXT_PUBLIC_SUPABASE_URL=... \
 
 ## Status
 
-Milestone progress is tracked in `SPEC.md` §10. Currently complete: M0 (repo/tooling scaffold), M1 (schema & RLS foundation), M2 (auth, invitations, MFA), M3 (core timekeeping loop), M4 (corrections workflow), M5 (notifications & manager dashboard), M6 (offline queue & sync).
+Milestone progress is tracked in `SPEC.md` §10. Currently complete: M0 (repo/tooling scaffold), M1 (schema & RLS foundation), M2 (auth, invitations, MFA), M3 (core timekeeping loop), M4 (corrections workflow), M5 (notifications & manager dashboard), M6 (offline queue & sync), M7 (pg_cron jobs, anonymization/DSAR compliance, avatar upload, admin config screens). See `SPEC.md` §11 for open items to close before M8 launch.

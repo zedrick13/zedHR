@@ -955,6 +955,19 @@ export type Database = {
         Returns: string
       }
       complete_password_reset: { Args: never; Returns: undefined }
+      create_department: {
+        Args: { p_manager_id?: string; p_name: string }
+        Returns: string
+      }
+      create_holiday: {
+        Args: {
+          p_date: string
+          p_name: string
+          p_region_scope?: string
+          p_type: string
+        }
+        Returns: string
+      }
       create_invitation: {
         Args: { p_email: string; p_role: string }
         Returns: {
@@ -963,6 +976,7 @@ export type Database = {
         }[]
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      delete_holiday: { Args: { p_holiday_id: string }; Returns: undefined }
       end_cb: {
         Args: {
           p_attempted_timestamp?: string
@@ -1025,6 +1039,10 @@ export type Database = {
         }
         Returns: string
       }
+      preview_work_arrangement: {
+        Args: { p_date: string; p_department_id: string; p_user_id: string }
+        Returns: string
+      }
       purge_stale_rows: { Args: never; Returns: undefined }
       record_login_failure: { Args: { p_email: string }; Returns: undefined }
       reject_correction_request: {
@@ -1040,6 +1058,16 @@ export type Database = {
         Returns: undefined
       }
       run_scheduled_anonymization: { Args: never; Returns: undefined }
+      set_work_arrangement: {
+        Args: {
+          p_arrangement: string
+          p_effective_date: string
+          p_expires_date?: string
+          p_target_id: string
+          p_target_level: string
+        }
+        Returns: string
+      }
       start_cb: {
         Args: {
           p_attempted_timestamp?: string
@@ -1064,6 +1092,25 @@ export type Database = {
         Returns: string
       }
       terminate_user: { Args: { p_user_id: string }; Returns: undefined }
+      update_department: {
+        Args: { p_department_id: string; p_manager_id?: string; p_name: string }
+        Returns: undefined
+      }
+      update_organization_settings: {
+        Args: {
+          p_data_retention_days?: number
+          p_display_locale: string
+          p_geofence_latitude?: number
+          p_geofence_longitude?: number
+          p_geofence_radius_m?: number
+          p_max_cb_minutes?: number
+          p_min_lb_minutes?: number
+          p_pay_cycle_start_date: string
+          p_pay_cycle_type: string
+          p_timezone: string
+        }
+        Returns: undefined
+      }
       update_own_avatar_path: {
         Args: { p_avatar_path: string }
         Returns: undefined

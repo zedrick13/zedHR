@@ -1,19 +1,38 @@
 import Link from "next/link";
 import styles from "./AdminNav.module.css";
 
-// Sub-nav within the admin section (SPEC's `/admin/*` route map covers
-// invitations, DSAR, and — M7's own separate checklist item — departments/
-// work arrangements/holidays/org settings/audit log, so this needs to
-// scale past two links soon).
-export function AdminNav({ current }: { current: "invitations" | "dsar" }) {
+export type AdminSection =
+  | "invitations"
+  | "dsar"
+  | "departments"
+  | "work-arrangements"
+  | "holidays"
+  | "org-settings"
+  | "audit-log";
+
+const SECTIONS: { key: AdminSection; href: string; label: string }[] = [
+  { key: "invitations", href: "/admin", label: "Invitations" },
+  { key: "dsar", href: "/admin/dsar", label: "DSAR" },
+  { key: "departments", href: "/admin/departments", label: "Departments" },
+  { key: "work-arrangements", href: "/admin/work-arrangements", label: "Work Arrangements" },
+  { key: "holidays", href: "/admin/holidays", label: "Holidays" },
+  { key: "org-settings", href: "/admin/org-settings", label: "Org Settings" },
+  { key: "audit-log", href: "/admin/audit-log", label: "Audit Log" },
+];
+
+// Sub-nav within the admin section (SPEC's `/admin/*` route map).
+export function AdminNav({ current }: { current: AdminSection }) {
   return (
     <nav className={styles.nav} aria-label="Admin sections">
-      <Link href="/admin" className={current === "invitations" ? styles.active : undefined}>
-        Invitations
-      </Link>
-      <Link href="/admin/dsar" className={current === "dsar" ? styles.active : undefined}>
-        DSAR
-      </Link>
+      {SECTIONS.map((section) => (
+        <Link
+          key={section.key}
+          href={section.href}
+          className={current === section.key ? styles.active : undefined}
+        >
+          {section.label}
+        </Link>
+      ))}
     </nav>
   );
 }

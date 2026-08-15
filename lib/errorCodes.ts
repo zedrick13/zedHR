@@ -28,6 +28,10 @@ export const ERROR_CODES = {
   // resolve_dsar_request (SPEC §8.3).
   DSAR_REQUEST_NOT_FOUND: 404,
   DSAR_REQUEST_ALREADY_RESOLVED: 409,
+  // Added in M7 (SPEC.md §5 note): not in the original registry, needed for
+  // the admin config RPCs (departments, holidays).
+  DEPARTMENT_NOT_FOUND: 404,
+  HOLIDAY_NOT_FOUND: 404,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
@@ -58,6 +62,8 @@ const TOAST_MESSAGES: Record<ErrorCode, string> = {
   INVALID_MFA_CODE: "That code isn't valid. Please try again.",
   DSAR_REQUEST_NOT_FOUND: "That request couldn't be found.",
   DSAR_REQUEST_ALREADY_RESOLVED: "That request was already resolved.",
+  DEPARTMENT_NOT_FOUND: "That department couldn't be found.",
+  HOLIDAY_NOT_FOUND: "That holiday couldn't be found.",
 };
 
 export function isErrorCode(code: string): code is ErrorCode {
