@@ -7,14 +7,16 @@
 }
 
 .nav a {
+  display: flex;
+  align-items: center;
+  min-height: var(--hit-target-min);
   color: var(--label-secondary);
   font-size: var(--text-subheadline);
   font-weight: 600;
   text-decoration: none;
-  padding: 4px 0;
 }
 
 .active {
-  color: var(--tint);
+  color: var(--label-primary);
   border-bottom: 2px solid var(--tint);
 }

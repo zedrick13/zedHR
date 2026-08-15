@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentOrgId } from "@/lib/org";
 import { AppHeader } from "@/components/features/navigation/AppHeader";
 import { DirectReportsGrid } from "@/components/features/dashboard/DirectReportsGrid";
 import { ReportsPane } from "@/components/features/dashboard/ReportsPane";
@@ -21,22 +22,20 @@ export default async function DashboardPage() {
     return null;
   }
 
-  const { data: profile } = await supabase
-    .from("MST_User")
-    .select("role, organization_id")
-    .eq("id", user.id)
-    .single();
+  const { data: profile } = await supabase.from("MST_User").select("role").eq("id", user.id).single();
 
   if (profile?.role !== "manager" && profile?.role !== "admin") {
     redirect("/");
   }
+
+  const organizationId = await getCurrentOrgId();
 
   const { data: directReports } = await supabase.rpc("get_direct_reports_status");
 
   const { data: org } = await supabase
     .from("MST_Organization")
     .select("pay_cycle_type, pay_cycle_start_date")
-    .eq("id", profile.organization_id)
+    .eq("id", organizationId)
     .single();
 
   const departments = Array.from(

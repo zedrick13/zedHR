@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentOrgId } from "@/lib/org";
 import { AppHeader } from "@/components/features/navigation/AppHeader";
 import { AdminNav } from "@/components/features/admin/AdminNav";
 import { OrgSettingsForm } from "./OrgSettingsForm";
@@ -12,15 +13,17 @@ export default async function OrgSettingsPage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase.from("MST_User").select("role, organization_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("MST_User").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") {
     redirect("/");
   }
 
+  const organizationId = await getCurrentOrgId();
+
   const { data: org } = await supabase
     .from("MST_Organization")
     .select("*")
-    .eq("id", profile.organization_id)
+    .eq("id", organizationId)
     .single();
 
   if (!org) {

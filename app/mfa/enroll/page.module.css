@@ -45,6 +45,7 @@
 .checkboxRow {
   display: flex;
   align-items: center;
+  min-height: var(--hit-target-min);
   gap: 8px;
   font-size: var(--text-footnote);
 }

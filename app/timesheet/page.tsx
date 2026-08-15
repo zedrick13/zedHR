@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentOrgId } from "@/lib/org";
 import { computeCurrentPayCycleRange } from "@/lib/payCycle";
 import { AppHeader } from "@/components/features/navigation/AppHeader";
 import { RequestCorrectionButton } from "@/components/features/corrections/RequestCorrectionButton";
@@ -43,20 +44,17 @@ export default async function TimesheetPage() {
     return null;
   }
 
-  const { data: profile } = await supabase
-    .from("MST_User")
-    .select("organization_id")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) {
+  let organizationId: string;
+  try {
+    organizationId = await getCurrentOrgId();
+  } catch {
     return null;
   }
 
   const { data: org } = await supabase
     .from("MST_Organization")
     .select("pay_cycle_type, pay_cycle_start_date")
-    .eq("id", profile.organization_id)
+    .eq("id", organizationId)
     .single();
 
   const range = org

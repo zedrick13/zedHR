@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentOrgId } from "@/lib/org";
 import { AppHeader } from "@/components/features/navigation/AppHeader";
 import { AdminNav } from "@/components/features/admin/AdminNav";
 import { WorkArrangementForm } from "./WorkArrangementForm";
@@ -12,10 +13,12 @@ export default async function WorkArrangementsPage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase.from("MST_User").select("role, organization_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("MST_User").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") {
     redirect("/");
   }
+
+  const organizationId = await getCurrentOrgId();
 
   const { data: departments } = await supabase.from("MST_Department").select("id, name").order("name");
   const { data: employees } = await supabase
@@ -37,7 +40,7 @@ export default async function WorkArrangementsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Set an arrangement</h2>
         <WorkArrangementForm
-          organizationId={profile.organization_id}
+          organizationId={organizationId}
           departments={departments ?? []}
           employees={employees ?? []}
           existing={arrangements ?? []}

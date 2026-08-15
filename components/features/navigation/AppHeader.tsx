@@ -38,14 +38,28 @@ export async function AppHeader({ title }: { title: string }) {
     <div className={styles.header}>
       <h1 className={styles.title}>{title}</h1>
       <div className={styles.headerActions}>
-        <Link href="/">Home</Link>
-        <Link href="/timesheet">Timesheet</Link>
-        <Link href="/requests">Requests</Link>
+        <Link className={styles.navLink} href="/">
+          Home
+        </Link>
+        <Link className={styles.navLink} href="/timesheet">
+          Timesheet
+        </Link>
+        <Link className={styles.navLink} href="/requests">
+          Requests
+        </Link>
         {(profile?.role === "manager" || profile?.role === "admin") && (
-          <Link href="/dashboard">Dashboard</Link>
+          <Link className={styles.navLink} href="/dashboard">
+            Dashboard
+          </Link>
         )}
-        {profile?.role === "admin" && <Link href="/admin">Admin</Link>}
-        <Link href="/profile">Profile</Link>
+        {profile?.role === "admin" && (
+          <Link className={styles.navLink} href="/admin">
+            Admin
+          </Link>
+        )}
+        <Link className={styles.navLink} href="/profile">
+          Profile
+        </Link>
         <NotificationBell userId={user.id} initialNotifications={notifications ?? []} />
         <SignOutButton />
       </div>

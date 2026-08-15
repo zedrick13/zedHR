@@ -12,7 +12,7 @@
 
 .forgotLink {
   font-size: var(--text-footnote);
-  color: var(--tint);
+  color: var(--label-secondary);
   text-align: center;
   text-decoration: none;
 }
