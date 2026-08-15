@@ -326,6 +326,36 @@ describe.skipIf(!reachable)("M5 export_timesheet_report", () => {
     expect(row.cb_minutes).toBeCloseTo(30, 0);
   });
 
+  it("formats session_date/clock_in/clock_out in the organization's timezone (Asia/Manila), not UTC", async () => {
+    const orgId = await createOrg(admin); // default timezone is Asia/Manila
+    const deptId = await createDepartment(admin, orgId);
+    const manager = await createUser(admin, { organizationId: orgId, role: "manager", departmentId: deptId });
+    await setDepartmentManager(admin, deptId, manager.id);
+    const employee = await createUser(admin, { organizationId: orgId, role: "employee", departmentId: deptId });
+
+    // 2026-08-14T20:00:00Z is 2026-08-15T04:00:00+08:00 in Manila — a
+    // deliberately UTC-date-crossing instant, so this assertion can't pass
+    // by accident if the RPC (or a future refactor) used UTC instead.
+    await admin.from("TIM_WorkSession").insert({
+      user_id: employee.id,
+      organization_id: orgId,
+      clock_in_time: "2026-08-14T20:00:00.000Z",
+      clock_out_time: "2026-08-14T21:30:00.000Z", // 05:30 Manila, same local day
+      clock_in_geo_status: "unavailable",
+    });
+
+    const managerClient = await signInAs(manager.email, manager.password);
+    const { data, error } = await rpc<ReportRow[]>(managerClient, "export_timesheet_report", {
+      p_employee_id: employee.id,
+    });
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+    expect(data![0].session_date).toBe("2026-08-15");
+    expect(data![0].clock_in).toBe("04:00");
+    expect(data![0].clock_out).toBe("05:30");
+  });
+
   it("a manager cannot filter to a department they don't manage", async () => {
     const orgId = await createOrg(admin);
     const deptA = await createDepartment(admin, orgId);

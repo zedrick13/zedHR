@@ -40,4 +40,4 @@ SUPABASE_SERVICE_ROLE_KEY=... NEXT_PUBLIC_SUPABASE_URL=... \
 
 ## Status
 
-Milestone progress is tracked in `SPEC.md` §10. Currently complete: M0 (repo/tooling scaffold), M1 (schema & RLS foundation), M2 (auth, invitations, MFA), M3 (core timekeeping loop), M4 (corrections workflow).
+Milestone progress is tracked in `SPEC.md` §10. Currently complete: M0 (repo/tooling scaffold), M1 (schema & RLS foundation), M2 (auth, invitations, MFA), M3 (core timekeeping loop), M4 (corrections workflow), M5 (notifications & manager dashboard).
