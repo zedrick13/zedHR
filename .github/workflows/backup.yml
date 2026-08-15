@@ -1,0 +1,98 @@
+name: Weekly encrypted backup
+
+# CLAUDE.md: "Repo / CI | GitHub. GitHub Actions runs ONLY the weekly
+# encrypted pg_dump backup workflow." This is that one workflow — no other
+# workflow file should be added to this repo without updating CLAUDE.md.
+#
+# Encryption is asymmetric (gpg --encrypt --recipient), not a shared
+# passphrase: only BACKUP_GPG_PUBLIC_KEY (safe to hold as a repo secret,
+# public keys aren't sensitive) is needed to encrypt here. The matching
+# private key and its passphrase are held outside GitHub entirely
+# (CLAUDE.md: "passphrase lives outside GitHub") — a leaked repo or
+# workflow run cannot decrypt any backup, only produce new ones.
+
+on:
+  schedule:
+    # 18:00 UTC Sunday = 02:00 Asia/Manila Monday, matching the other
+    # scheduled-job convention already established for pg_cron in M7.
+    - cron: "0 18 * * 0"
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        # Data-only, scoped to public (our own schema) + the auth identity
+        # tables (auth.users/identities/mfa_factors/mfa_amr_claims), not a
+        # full cluster dump. A restore target is always either the same
+        # project or a freshly provisioned one — either way its platform
+        # schemas (auth, storage, extensions, cron, realtime) already exist
+        # and are version-managed by Supabase; restoring their DDL from an
+        # old dump conflicts with what's already there. Our own schema is
+        # instead recreated by `supabase db push` (this repo's migrations)
+        # before loading this dump. auth.schema_migrations/auth.instances
+        # are GoTrue's own internal bookkeeping and are excluded for the
+        # same reason. --disable-triggers is required for the one genuine
+        # circular FK in this schema (MST_Department.manager_id <->
+        # MST_User.department_id) and must be run as a superuser on
+        # restore. See README's "Restore drill" section for the verified
+        # step-by-step procedure.
+        run: |
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --data-only --disable-triggers \
+            --schema=public --schema=auth \
+            --exclude-table-data='auth.schema_migrations' \
+            --exclude-table-data='auth.instances' \
+            -f backup.sql
+
+      - name: Encrypt dump
+        env:
+          BACKUP_GPG_PUBLIC_KEY: ${{ secrets.BACKUP_GPG_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          echo "$BACKUP_GPG_PUBLIC_KEY" | gpg --batch --import
+          RECIPIENT_FPR=$(gpg --batch --list-keys --with-colons | awk -F: '/^pub/ { print $5; exit }')
+          gpg --batch --yes --trust-model always --encrypt --recipient "$RECIPIENT_FPR" -o backup.sql.gpg backup.sql
+          shred -u backup.sql
+
+      - name: Set backup filename
+        run: echo "BACKUP_FILENAME=$(date -u +%Y-%m-%dT%H%M%SZ).sql.gpg" >> "$GITHUB_ENV"
+
+      - name: Upload as workflow artifact (90-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backup.sql.gpg
+          retention-days: 90
+
+      - name: Upload to Supabase Storage backups bucket
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          curl -sSf -X POST \
+            "$SUPABASE_URL/storage/v1/object/backups/$BACKUP_FILENAME" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @backup.sql.gpg
+
+      - name: Prune backups older than 90 days
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm tsx scripts/prune-old-backups.ts
