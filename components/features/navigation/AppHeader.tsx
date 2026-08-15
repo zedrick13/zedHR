@@ -45,6 +45,7 @@ export async function AppHeader({ title }: { title: string }) {
           <Link href="/dashboard">Dashboard</Link>
         )}
         {profile?.role === "admin" && <Link href="/admin">Admin</Link>}
+        <Link href="/profile">Profile</Link>
         <NotificationBell userId={user.id} initialNotifications={notifications ?? []} />
         <SignOutButton />
       </div>

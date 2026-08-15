@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "lib/database.types.ts",
+    // Deno runtime (URL imports, `Deno` global) — a separate toolchain from
+    // this Next.js app's Node/TypeScript config, not linted here.
+    "supabase/functions/**",
   ]),
 ]);
 

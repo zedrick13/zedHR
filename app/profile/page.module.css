@@ -1,0 +1,45 @@
+.main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--separator);
+  padding: var(--space-3);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.name {
+  font-size: var(--text-title2);
+  font-weight: 700;
+  margin: 0;
+}
+
+.role {
+  color: var(--label-secondary);
+  font-size: var(--text-subheadline);
+  text-transform: capitalize;
+  margin: 0;
+}
+
+.email {
+  color: var(--label-secondary);
+  font-size: var(--text-footnote);
+  margin: 0;
+}

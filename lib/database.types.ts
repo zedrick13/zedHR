@@ -1064,6 +1064,10 @@ export type Database = {
         Returns: string
       }
       terminate_user: { Args: { p_user_id: string }; Returns: undefined }
+      update_own_avatar_path: {
+        Args: { p_avatar_path: string }
+        Returns: undefined
+      }
       verify_backup_code: { Args: { p_code: string }; Returns: undefined }
     }
     Enums: {
