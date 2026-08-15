@@ -4,45 +4,15 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { callRpc } from "@/lib/callRpc";
 import { computeCurrentPayCycleRange, type DateRange, type PayCycleType } from "@/lib/payCycle";
+import { buildTimesheetReportCsv, downloadCsv, type TimesheetReportRow } from "@/lib/csv";
 import { Button } from "@/components/ui/Button";
 import styles from "./ReportsPane.module.css";
 
 type Person = { id: string; name: string; departmentId: string | null };
 type Department = { id: string; name: string };
 
-type ReportRow = {
-  employee_name: string;
-  department_name: string | null;
-  session_date: string;
-  clock_in: string;
-  clock_out: string | null;
-  duration_hours: number;
-  cb_minutes: number;
-  lb_minutes: number;
-  violations: string | null;
-  geofence: string;
-};
-
-const CSV_HEADERS = [
-  "Employee",
-  "Department",
-  "Date",
-  "Clock In",
-  "Clock Out",
-  "Duration (h)",
-  "Paid Break (min)",
-  "Lunch (min)",
-  "Violations",
-  "Geofence",
-];
-
 function toDateInputValue(d: Date): string {
   return d.toISOString().slice(0, 10);
-}
-
-function csvEscape(value: string | number | null | undefined): string {
-  const s = value === null || value === undefined ? "" : String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 function stepCycle(
@@ -88,7 +58,7 @@ export function ReportsPane({
     setExportedCount(null);
 
     const supabase = createClient();
-    const { data, error } = await callRpc<ReportRow[]>(supabase, "export_timesheet_report", {
+    const { data, error } = await callRpc<TimesheetReportRow[]>(supabase, "export_timesheet_report", {
       p_department_id: departmentId || null,
       p_employee_id: employeeId || null,
       p_range_start: toDateInputValue(range.start),
@@ -103,35 +73,10 @@ export function ReportsPane({
     }
 
     const rows = data ?? [];
-    const csvLines = [
-      CSV_HEADERS.join(","),
-      ...rows.map((row) =>
-        [
-          row.employee_name,
-          row.department_name,
-          row.session_date,
-          row.clock_in,
-          row.clock_out,
-          row.duration_hours,
-          row.cb_minutes,
-          row.lb_minutes,
-          row.violations,
-          row.geofence,
-        ]
-          .map(csvEscape)
-          .join(","),
-      ),
-    ];
-
-    const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `timesheet-report-${toDateInputValue(range.start)}-to-${toDateInputValue(range.end)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadCsv(
+      buildTimesheetReportCsv(rows),
+      `timesheet-report-${toDateInputValue(range.start)}-to-${toDateInputValue(range.end)}.csv`,
+    );
 
     setExportedCount(rows.length);
   }

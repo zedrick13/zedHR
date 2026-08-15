@@ -121,6 +121,77 @@ export type Database = {
           },
         ]
       }
+      MST_DSARRequest: {
+        Row: {
+          created_at: string
+          id: string
+          logged_by: string
+          notes: string | null
+          organization_id: string
+          request_type: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logged_by: string
+          notes?: string | null
+          organization_id: string
+          request_type: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logged_by?: string
+          notes?: string | null
+          organization_id?: string
+          request_type?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "MST_DSARRequest_logged_by_fkey"
+            columns: ["logged_by"]
+            isOneToOne: false
+            referencedRelation: "MST_User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "MST_DSARRequest_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "MST_Organization"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "MST_DSARRequest_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "MST_User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "MST_DSARRequest_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "MST_User"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       MST_Holiday: {
         Row: {
           created_at: string
@@ -942,6 +1013,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      log_dsar_request: {
+        Args: { p_notes?: string; p_type: string; p_user_id: string }
+        Returns: string
+      }
       log_sync_conflict: {
         Args: {
           p_details: Json
@@ -954,6 +1029,10 @@ export type Database = {
       record_login_failure: { Args: { p_email: string }; Returns: undefined }
       reject_correction_request: {
         Args: { p_correction_id: string; p_rejection_note?: string }
+        Returns: undefined
+      }
+      resolve_dsar_request: {
+        Args: { p_dsar_id: string; p_resolution_note?: string }
         Returns: undefined
       }
       revoke_invitation: {

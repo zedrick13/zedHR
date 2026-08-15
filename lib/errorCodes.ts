@@ -24,6 +24,10 @@ export const ERROR_CODES = {
   // Added in M2 (SPEC.md §5 note): not in the original registry, needed for
   // the backup-code verification path (SPEC §7).
   INVALID_MFA_CODE: 422,
+  // Added in M7 (SPEC.md §5 note): not in the original registry, needed for
+  // resolve_dsar_request (SPEC §8.3).
+  DSAR_REQUEST_NOT_FOUND: 404,
+  DSAR_REQUEST_ALREADY_RESOLVED: 409,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
@@ -52,6 +56,8 @@ const TOAST_MESSAGES: Record<ErrorCode, string> = {
   USER_NOT_FOUND: "That user couldn't be found.",
   USER_NOT_TERMINATED: "That user isn't terminated.",
   INVALID_MFA_CODE: "That code isn't valid. Please try again.",
+  DSAR_REQUEST_NOT_FOUND: "That request couldn't be found.",
+  DSAR_REQUEST_ALREADY_RESOLVED: "That request was already resolved.",
 };
 
 export function isErrorCode(code: string): code is ErrorCode {
