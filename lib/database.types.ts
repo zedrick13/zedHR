@@ -860,11 +860,23 @@ export type Database = {
         Returns: undefined
       }
       clock_in_user: {
-        Args: { p_geo_status: string; p_lat: number; p_lng: number }
+        Args: {
+          p_attempted_timestamp?: string
+          p_geo_status: string
+          p_lat: number
+          p_lng: number
+          p_offline_duration_seconds?: number
+        }
         Returns: string
       }
       clock_out_user: {
-        Args: { p_geo_status: string; p_lat: number; p_lng: number }
+        Args: {
+          p_attempted_timestamp?: string
+          p_geo_status: string
+          p_lat: number
+          p_lng: number
+          p_offline_duration_seconds?: number
+        }
         Returns: string
       }
       complete_password_reset: { Args: never; Returns: undefined }
@@ -876,8 +888,20 @@ export type Database = {
         }[]
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
-      end_cb: { Args: never; Returns: string }
-      end_lb: { Args: never; Returns: string }
+      end_cb: {
+        Args: {
+          p_attempted_timestamp?: string
+          p_offline_duration_seconds?: number
+        }
+        Returns: string
+      }
+      end_lb: {
+        Args: {
+          p_attempted_timestamp?: string
+          p_offline_duration_seconds?: number
+        }
+        Returns: string
+      }
       export_timesheet_report: {
         Args: {
           p_department_id?: string
@@ -913,6 +937,14 @@ export type Database = {
           user_id: string
         }[]
       }
+      log_sync_conflict: {
+        Args: {
+          p_details: Json
+          p_failed_action: string
+          p_work_session_id?: string
+        }
+        Returns: string
+      }
       record_login_failure: { Args: { p_email: string }; Returns: undefined }
       reject_correction_request: {
         Args: { p_correction_id: string; p_rejection_note?: string }
@@ -922,8 +954,20 @@ export type Database = {
         Args: { p_invitation_id: string }
         Returns: undefined
       }
-      start_cb: { Args: never; Returns: string }
-      start_lb: { Args: never; Returns: string }
+      start_cb: {
+        Args: {
+          p_attempted_timestamp?: string
+          p_offline_duration_seconds?: number
+        }
+        Returns: string
+      }
+      start_lb: {
+        Args: {
+          p_attempted_timestamp?: string
+          p_offline_duration_seconds?: number
+        }
+        Returns: string
+      }
       submit_correction_request: {
         Args: {
           p_reason: string

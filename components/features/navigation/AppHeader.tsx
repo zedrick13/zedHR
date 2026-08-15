@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/features/auth/SignOutButton";
 import { NotificationBell } from "@/components/features/notifications/NotificationBell";
+import { OfflineSyncListener } from "@/components/features/timekeeping/OfflineSyncListener";
 import styles from "./AppHeader.module.css";
 
 // Shared authenticated-route header: page title + primary nav + the
@@ -47,6 +48,7 @@ export async function AppHeader({ title }: { title: string }) {
         <NotificationBell userId={user.id} initialNotifications={notifications ?? []} />
         <SignOutButton />
       </div>
+      <OfflineSyncListener />
     </div>
   );
 }

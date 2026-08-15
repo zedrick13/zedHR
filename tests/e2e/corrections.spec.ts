@@ -58,12 +58,18 @@ async function seedManagerAndEmployee(password: string) {
     mfa_enrolled: false,
   });
 
+  // clock_in_time must fall on the same UTC calendar day as
+  // pay_cycle_start_date (which defaults to current_date at org-creation
+  // time) or the seeded session falls outside the pay cycle range the
+  // timesheet page queries. An "N hours ago" offset can silently cross
+  // that UTC-midnight boundary depending on when the suite happens to
+  // run — use "just now" instead, which can't.
   const { data: session } = await admin
     .from("TIM_WorkSession")
     .insert({
       user_id: employeeAuth!.user!.id,
       organization_id: org!.id,
-      clock_in_time: new Date(Date.now() - 8 * 3600_000).toISOString(),
+      clock_in_time: new Date(Date.now() - 10 * 60_000).toISOString(),
       clock_out_time: new Date().toISOString(),
       clock_in_geo_status: "unavailable",
     })
