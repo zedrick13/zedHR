@@ -1,0 +1,11 @@
+.title {
+  font-size: var(--text-title2);
+  font-weight: 700;
+  margin: 0;
+}
+
+.body {
+  font-size: var(--text-body);
+  color: var(--label-secondary);
+  margin: 0;
+}

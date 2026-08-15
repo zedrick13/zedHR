@@ -1,0 +1,18 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 360px;
+}
+
+.error {
+  color: var(--semantic-red);
+  font-size: var(--text-footnote);
+  margin: 0;
+}
+
+.success {
+  color: var(--semantic-green);
+  font-size: var(--text-footnote);
+  margin: 0;
+}

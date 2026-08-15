@@ -1,0 +1,30 @@
+.skeleton {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--separator);
+  opacity: 0;
+  animation: skeletonReveal 0ms 300ms forwards;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--bg-elevated-translucent), transparent);
+  animation: skeletonShimmer 1.5s ease-in-out 300ms infinite;
+}
+
+@keyframes skeletonReveal {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes skeletonShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

@@ -1,0 +1,37 @@
+.button {
+  min-height: var(--hit-target-min);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-control);
+  border: none;
+  font-size: var(--text-headline);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform var(--duration-popover) var(--ease-standard),
+    opacity var(--duration-popover) var(--ease-standard);
+}
+
+.button:active {
+  transform: scale(var(--press-scale));
+}
+
+.primary {
+  background: var(--tint);
+  color: #ffffff;
+}
+
+.secondary {
+  background: var(--bg-elevated);
+  color: var(--label-primary);
+  border: 1px solid var(--separator);
+}
+
+.destructive {
+  background: var(--semantic-red);
+  color: #ffffff;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

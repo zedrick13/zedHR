@@ -1,0 +1,92 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.headcount {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statValue {
+  font-size: var(--text-title1);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-size: var(--text-footnote);
+  color: var(--label-secondary);
+}
+
+.empty {
+  color: var(--label-secondary);
+  font-size: var(--text-body);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--separator);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-subheadline);
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--separator);
+  white-space: nowrap;
+}
+
+.table th {
+  color: var(--label-secondary);
+  font-weight: 600;
+  font-size: var(--text-footnote);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.hours {
+  font-variant-numeric: tabular-nums;
+}
+
+.chip {
+  font-size: var(--text-caption);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip_ok {
+  background: color-mix(in srgb, var(--semantic-green) 15%, transparent);
+  color: var(--semantic-green);
+}
+
+.chip_out_of_bounds {
+  background: color-mix(in srgb, var(--semantic-amber) 15%, transparent);
+  color: var(--semantic-amber);
+}
+
+.chip_wfh,
+.chip_no_gps,
+.chip_none {
+  background: var(--bg-base);
+  color: var(--label-secondary);
+}
